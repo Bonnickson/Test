@@ -154,6 +154,20 @@ export function pintarFila(tablaBody, carpeta, r) {
         const tr = document.createElement("tr");
         tr.setAttribute("data-carpeta", carpeta);
         tr.classList.remove("processing");
+
+        // Determinar estado
+        const tieneErrores = r.errores?.length > 0;
+        const tieneAlertas = Object.values(r.alertasPorServicio || {}).some(
+            (arr) => arr.length > 0
+        );
+        let estado = "sin-errores";
+        if (tieneErrores) {
+            estado = "con-errores";
+        } else if (tieneAlertas) {
+            estado = "con-alertas";
+        }
+        tr.setAttribute("data-estado", estado);
+
         tr.innerHTML = renderEvento(
             carpeta,
             r,
@@ -173,8 +187,17 @@ export function pintarFila(tablaBody, carpeta, r) {
  * Renderiza filas de paquete - una fila por servicio
  */
 function renderPaqueteFilas(tablaBody, carpeta, r, tipoDisplay, erroresHTML) {
-    // Orden personalizado de servicios
-    const ordenServicios = ["VM", "ENFERMERIA", "TR", "TF", "PSICOLOGIA", "TS"];
+    // Orden personalizado de servicios: VM, ENF, TR, TF, y luego los demás
+    const ordenServicios = [
+        "VM",
+        "ENF",
+        "TR",
+        "TF",
+        "SUCCION",
+        "PSI",
+        "TS",
+        "TO",
+    ];
 
     const serviciosArray = [...r.servicios].sort((a, b) => {
         const indexA = ordenServicios.indexOf(a);
@@ -191,12 +214,30 @@ function renderPaqueteFilas(tablaBody, carpeta, r, tipoDisplay, erroresHTML) {
     serviciosArray.forEach((s, index) => {
         const tr = document.createElement("tr");
         tr.setAttribute("data-carpeta", carpeta);
+        tr.setAttribute("data-servicio", s);
         tr.classList.add("paquete-row");
 
         const fechas5 = r.fechasPorServicio[s] || [];
         const cant5 = [...new Set(fechas5)].length;
         const numero2 = r.numerosPorServicio?.[s] || "—";
         const servicioLower = s === "SUCCION" ? "succion" : s.toLowerCase();
+
+        // Determinar estado para filtrado
+        const erroresServicio = r.erroresPorServicio?.[s] || [];
+        const alertasServicio = r.alertasPorServicio?.[s] || [];
+        const erroresGenerales = r.errores || [];
+
+        const tieneErrores =
+            erroresServicio.length > 0 || erroresGenerales.length > 0;
+        const tieneAlertas = alertasServicio.length > 0;
+
+        let estado = "sin-errores";
+        if (tieneErrores) {
+            estado = "con-errores";
+        } else if (tieneAlertas) {
+            estado = "con-alertas";
+        }
+        tr.setAttribute("data-estado", estado);
 
         // Mostrar siempre los archivos 2, 4, 5 (existan o no)
         const archivosEsperados = ["2", "4", "5"];
@@ -213,7 +254,7 @@ function renderPaqueteFilas(tablaBody, carpeta, r, tipoDisplay, erroresHTML) {
                     status === "✔" ? "ok" : status === "—" ? "missing" : "fail";
                 const label = `${num} ${status}`;
                 if (url) {
-                    return `<a href="${url}" target="_blank" class="archivo-link ${cls}" title="Abrir ${nombreArchivo}">${label}</a>`;
+                    return `<a href="#" onclick="abrirPDFModal('${url}', '${nombreArchivo}'); return false;" class="archivo-link ${cls}" title="Abrir ${nombreArchivo}">${label}</a>`;
                 }
                 return `<span class="archivo-link ${cls}">${label}</span>`;
             })
@@ -232,18 +273,18 @@ function renderPaqueteFilas(tablaBody, carpeta, r, tipoDisplay, erroresHTML) {
 
         const nombreCompleto = SERVICIOS_NOMBRES[s] || s;
 
-        // Obtener errores, éxitos y alertas específicos del servicio
-        const erroresServicio = r.erroresPorServicio?.[s] || [];
+        // Obtener errores, éxitos y alertas específicos del servicio para renderizar
+        const erroresServicioRender = r.erroresPorServicio?.[s] || [];
         const exitosServicio = r.exitosPorServicio?.[s] || [];
-        const alertasServicio = r.alertasPorServicio?.[s] || [];
+        const alertasServicioRender = r.alertasPorServicio?.[s] || [];
 
         const exitosHTML = exitosServicio
-            .map((e) => `<div class="exito-item">✓ ${e}</div>`)
+            .map((e) => `<div class="exito-item validacion-exitosa">✓ ${e}</div>`)
             .join("");
-        const alertasHTML = alertasServicio
+        const alertasHTML = alertasServicioRender
             .map((e) => `<div class="alerta-item">⚠ ${e}</div>`)
             .join("");
-        const erroresHTML = erroresServicio
+        const erroresHTML = erroresServicioRender
             .map((e) => `<div class="error-item">• ${e}</div>`)
             .join("");
 
@@ -257,7 +298,7 @@ function renderPaqueteFilas(tablaBody, carpeta, r, tipoDisplay, erroresHTML) {
             tr.innerHTML = `
                 <td rowspan="${serviciosArray.length}">${tipoDisplay}</td>
                 <td rowspan="${serviciosArray.length}">${carpeta}</td>
-                <td>${nombreCompleto}</td>
+                <td class="servicio-nombre">${nombreCompleto}</td>
                 <td>${cant5}</td>
                 <td>${archivosHTML || "—"}</td>
                 <td>${numero2}</td>
@@ -266,7 +307,7 @@ function renderPaqueteFilas(tablaBody, carpeta, r, tipoDisplay, erroresHTML) {
             `;
         } else {
             tr.innerHTML = `
-                <td>${nombreCompleto}</td>
+                <td class="servicio-nombre">${nombreCompleto}</td>
                 <td>${cant5}</td>
                 <td>${archivosHTML || "—"}</td>
                 <td>${numero2}</td>
@@ -295,7 +336,7 @@ function renderEvento(
             const cls =
                 symbol === "✔" ? "ok" : symbol === "—" ? "missing" : "fail";
             if (url) {
-                return `<td class="${cls}"><a href="${url}" target="_blank" class="pdf-link" data-file="${p}">${symbol}</a></td>`;
+                return `<td class="${cls}"><a href="#" onclick="abrirPDFModal('${url}', '${p}'); return false;" class="pdf-link" data-file="${p}">${symbol}</a></td>`;
             }
             return `<td class="${cls}">${symbol}</td>`;
         })

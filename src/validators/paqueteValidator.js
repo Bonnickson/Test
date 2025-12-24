@@ -22,7 +22,8 @@ export async function validarPorPaquete(
     resultados,
     estado,
     updateRow,
-    convenio = "capital-salud"
+    convenio = "capital-salud",
+    onProgresoArchivo = null
 ) {
     const nombres = archivos.map((a) => a.name);
 
@@ -73,7 +74,7 @@ export async function validarPorPaquete(
         for (const numArchivo of ["2", "5", "4"]) {
             let archivoParaProcesar = null;
 
-            // 1. Buscar archivo específico del servicio (ej: "2 vm.pdf")
+            // 1. SIEMPRE buscar primero el archivo específico del servicio (ej: "2 vm.pdf")
             const nombreEspecifico = `${numArchivo} ${servicioLower}.pdf`;
             archivoParaProcesar = archivos.find(
                 (f) =>
@@ -81,7 +82,8 @@ export async function validarPorPaquete(
                     f.type === "application/pdf"
             );
 
-            // 2. Si es archivo 2 y no existe el específico, buscar en "2 paq.pdf"
+            // 2. SOLO si no existe el individual, para archivo 2 en FOMAG, buscar en "2 paq.pdf"
+            // Si existe individual, ignorar paq.pdf completamente
             if (
                 !archivoParaProcesar &&
                 numArchivo === "2" &&
@@ -94,6 +96,16 @@ export async function validarPorPaquete(
                 );
                 if (archivoPaquete) {
                     archivoParaProcesar = archivoPaquete;
+                    // Guardar URL para permitir abrir desde el click en "2 servicio.pdf"
+                    const nombreEspecificoParaUrl = `2 ${servicioLower}.pdf`;
+                    // Copiar la URL del 2 paq.pdf para este servicio específico
+                    const urlPaq =
+                        resultados[carpeta].fileUrls["2 paq.pdf"] ||
+                        resultados[carpeta].fileUrls["2 PAQ.pdf"];
+                    if (urlPaq) {
+                        resultados[carpeta].fileUrls[nombreEspecificoParaUrl] =
+                            urlPaq;
+                    }
                 }
             }
 
@@ -107,6 +119,11 @@ export async function validarPorPaquete(
                     ] !== "—"
                 ) {
                     estado.textContent = `Procesando: ${carpeta} / ${archivoParaProcesar.name} (${servicio})`;
+                    
+                    // Actualizar barra de progreso si el callback está disponible
+                    if (onProgresoArchivo) {
+                        onProgresoArchivo(archivoParaProcesar.name);
+                    }
 
                     await validarPDFPaquete(
                         archivoParaProcesar,
@@ -185,32 +202,24 @@ function validarPaqueteCronico(
         resultados[carpeta].exitosPorServicio[servicio] ||= [];
 
         for (const num of ["2", "4", "5"]) {
-            // Para FOMAG: buscar primero archivo individual, luego en paq.pdf
+            // Para FOMAG archivo 2: buscar primero archivo individual, luego en paq.pdf
             let existe = false;
             const nombreIndividual = `${num} ${servicio.toLowerCase()}.pdf`;
 
-            if (convenio === "fomag" && num === "2") {
-                // Buscar archivo individual primero
-                existe = nombres.some(
-                    (n) => n.toLowerCase() === nombreIndividual
-                );
+            // Siempre buscar primero el archivo individual
+            existe = nombres.some((n) => n.toLowerCase() === nombreIndividual);
 
-                // Si no existe, marcar para buscar en 2 paq.pdf
-                if (!existe) {
-                    const tiene2Paq = nombres.some(
-                        (n) => n.toLowerCase() === "2 paq.pdf"
-                    );
-                    if (tiene2Paq) {
-                        existe = true; // Se buscará en el procesamiento del PDF
-                        resultados[carpeta].buscarEn2Paq =
-                            resultados[carpeta].buscarEn2Paq || new Set();
-                        resultados[carpeta].buscarEn2Paq.add(servicio);
-                    }
-                }
-            } else {
-                existe = nombres.some(
-                    (n) => n.toLowerCase() === nombreIndividual
+            // Solo para FOMAG y solo para archivo 2: si no existe individual, buscar en paq.pdf
+            if (!existe && convenio === "fomag" && num === "2") {
+                const tiene2Paq = nombres.some(
+                    (n) => n.toLowerCase() === "2 paq.pdf"
                 );
+                if (tiene2Paq) {
+                    existe = true; // Se buscará en el procesamiento del PDF
+                    resultados[carpeta].buscarEn2Paq =
+                        resultados[carpeta].buscarEn2Paq || new Set();
+                    resultados[carpeta].buscarEn2Paq.add(servicio);
+                }
             }
 
             resultados[carpeta].pdfsPorServicio[servicio][num] = existe
@@ -270,28 +279,20 @@ function validarPaqueteCronicoConTerapias(
             let existe = false;
             const nombreIndividual = `${num} ${servicioLower}.pdf`;
 
-            if (convenio === "fomag" && num === "2") {
-                // Buscar archivo individual primero
-                existe = nombres.some(
-                    (n) => n.toLowerCase() === nombreIndividual
-                );
+            // Siempre buscar primero el archivo individual
+            existe = nombres.some((n) => n.toLowerCase() === nombreIndividual);
 
-                // Si no existe, marcar para buscar en 2 paq.pdf
-                if (!existe) {
-                    const tiene2Paq = nombres.some(
-                        (n) => n.toLowerCase() === "2 paq.pdf"
-                    );
-                    if (tiene2Paq) {
-                        existe = true; // Se buscará en el procesamiento del PDF
-                        resultados[carpeta].buscarEn2Paq =
-                            resultados[carpeta].buscarEn2Paq || new Set();
-                        resultados[carpeta].buscarEn2Paq.add(servicio);
-                    }
-                }
-            } else {
-                existe = nombres.some(
-                    (n) => n.toLowerCase() === nombreIndividual
+            // Solo para FOMAG y solo para archivo 2: si no existe individual, buscar en paq.pdf
+            if (!existe && convenio === "fomag" && num === "2") {
+                const tiene2Paq = nombres.some(
+                    (n) => n.toLowerCase() === "2 paq.pdf"
                 );
+                if (tiene2Paq) {
+                    existe = true; // Se buscará en el procesamiento del PDF
+                    resultados[carpeta].buscarEn2Paq =
+                        resultados[carpeta].buscarEn2Paq || new Set();
+                    resultados[carpeta].buscarEn2Paq.add(servicio);
+                }
             }
 
             resultados[carpeta].pdfsPorServicio[servicio][num] = existe
@@ -366,6 +367,28 @@ async function validarPDFPaquete(
         const esPaquete = file.name.toLowerCase().includes("paq.pdf");
         const numArchivo = file.name.match(/^(\d+) /)?.[1];
 
+        // Validar número de documento en archivos 2 y 5 para FOMAG
+        if (
+            convenio === "fomag" &&
+            (numArchivo === "2" || numArchivo === "5") &&
+            servicio !== "PAQ"
+        ) {
+            if (!textoPlanoNorm.includes(nroDocumento)) {
+                resultados[carpeta].erroresPorServicio[servicio] =
+                    resultados[carpeta].erroresPorServicio[servicio] || [];
+                resultados[carpeta].erroresPorServicio[servicio].push(
+                    `${file.name}: no contiene número ${nroDocumento}`
+                );
+            } else {
+                // Agregar mensaje de éxito cuando se encuentra el documento
+                resultados[carpeta].exitosPorServicio[servicio] =
+                    resultados[carpeta].exitosPorServicio[servicio] || [];
+                resultados[carpeta].exitosPorServicio[servicio].push(
+                    `${file.name}: contiene número ${nroDocumento}`
+                );
+            }
+        }
+
         // Si es "2 paq.pdf" de FOMAG, procesar múltiples servicios
         if (esPaquete && numArchivo === "2" && convenio === "fomag") {
             await procesarArchivoPaqueteFomag(
@@ -373,7 +396,8 @@ async function validarPDFPaquete(
                 carpeta,
                 texto,
                 textoPlanoNorm,
-                resultados
+                resultados,
+                nroDocumento
             );
         } else {
             // Procesamiento normal
@@ -387,24 +411,39 @@ async function validarPDFPaquete(
             // Extraer número del texto para archivo 2 (paquetes)
             if (numArchivo === "2" && servicio !== "PAQ") {
                 const REGLAS_PAQUETE = obtenerReglasPaquete(convenio);
-                const textoBuscar = REGLAS_PAQUETE[servicio]?.["2.pdf"]?.debeContener || "";
-                const numeroExtraido = extraerNumeroDelTexto(texto, textoBuscar);
-                
-                // Debug: mostrar info del 2.pdf SIEMPRE
-                console.log(`\n📄 Archivo 2.pdf`);
-                console.log(`   Registro: ${carpeta}`);
-                console.log(`   Servicio: ${servicio}`);
-                console.log(`   Nombre del PDF: ${file.name}`);
-                console.log(
-                    `   Texto buscando: "${
-                        REGLAS_PAQUETE[servicio]?.["2.pdf"]?.debeContener ||
-                        "N/A"
-                    }"`
+                const textoBuscar =
+                    REGLAS_PAQUETE[servicio]?.["2.pdf"]?.debeContener || "";
+                const numeroExtraido = extraerNumeroDelTexto(
+                    texto,
+                    textoBuscar
                 );
-                console.log(`   Cantidad Auto encontrada: ${numeroExtraido !== null ? numeroExtraido : 'NO ENCONTRADO'}`);
-                console.log(`   Texto completo del PDF:`);
-                console.log(texto);
-                
+
+                // Log limpio con información relevante del 2.pdf - SIEMPRE mostrar
+                console.log(
+                    `\n📄 VALIDACIÓN ARCHIVO 2.pdf\n` +
+                        `   Carpeta: ${carpeta}\n` +
+                        `   Servicio: ${servicio}\n` +
+                        `   Archivo: ${file.name}\n` +
+                        `   Convenio: ${convenio}\n` +
+                        `   Reglas obtenidas: ${JSON.stringify(
+                            REGLAS_PAQUETE[servicio],
+                            null,
+                            2
+                        )}\n` +
+                        `   Texto buscado: "${textoBuscar || "N/A"}"\n` +
+                        `   Cant. Auto encontrada: ${
+                            numeroExtraido !== null
+                                ? numeroExtraido
+                                : "NO ENCONTRADO"
+                        }\n` +
+                        `   Documento (${nroDocumento}): ${
+                            textoPlanoNorm.includes(nroDocumento)
+                                ? "✓ Encontrado"
+                                : "✗ NO encontrado"
+                        }\n` +
+                        `\n--- TEXTO COMPLETO DEL PDF ---\n${texto}\n--- FIN TEXTO ---\n`
+                );
+
                 if (numeroExtraido !== null) {
                     resultados[carpeta].numerosPorServicio =
                         resultados[carpeta].numerosPorServicio || {};
@@ -470,15 +509,31 @@ async function validarPDFPaquete(
 
             if (debeAplicarRegla && REGLAS_PAQUETE[servicio][claveArchivo]) {
                 const regla = REGLAS_PAQUETE[servicio][claveArchivo];
-                const buscar = regla.debeContener;
-                const buscarNorm = normalizeForSearch(buscar);
 
-                if (!textoPlanoNorm.includes(buscarNorm)) {
+                // Convertir debeContener a array si no lo es (compatibilidad)
+                const textosABuscar = Array.isArray(regla.debeContener)
+                    ? regla.debeContener
+                    : [regla.debeContener];
+
+                let textoEncontrado = null;
+
+                // Buscar cualquiera de los textos
+                for (const buscar of textosABuscar) {
+                    const buscarNorm = normalizeForSearch(buscar);
+                    if (textoPlanoNorm.includes(buscarNorm)) {
+                        textoEncontrado = buscar;
+                        break;
+                    }
+                }
+
+                if (!textoEncontrado) {
                     resultados[carpeta].erroresPorServicio[servicio] =
                         resultados[carpeta].erroresPorServicio[servicio] || [];
 
                     resultados[carpeta].erroresPorServicio[servicio].push(
-                        `${numArchivo}.pdf: falta "${regla.debeContener}"`
+                        `${numArchivo}.pdf: falta alguno de: ${textosABuscar.join(
+                            " o "
+                        )}`
                     );
                     // Marcar el archivo con error
                     if (resultados[carpeta].pdfsPorServicio[servicio]) {
@@ -490,7 +545,7 @@ async function validarPDFPaquete(
                     resultados[carpeta].exitosPorServicio[servicio] =
                         resultados[carpeta].exitosPorServicio[servicio] || [];
                     resultados[carpeta].exitosPorServicio[servicio].push(
-                        `${numArchivo}.pdf: se encontró "${regla.debeContener}"`
+                        `${numArchivo}.pdf: se encontró "${textoEncontrado}"`
                     );
                 }
 
@@ -550,7 +605,8 @@ async function procesarArchivoPaqueteFomag(
     carpeta,
     texto,
     textoPlanoNorm,
-    resultados
+    resultados,
+    nroDocumento
 ) {
     // Servicios a buscar (los que se encontraron en archivos 4 y 5)
     const serviciosABuscar = resultados[carpeta].buscarEn2Paq || new Set();
@@ -561,11 +617,33 @@ async function procesarArchivoPaqueteFomag(
         if (!textoABuscar) continue;
 
         const textoNorm = normalizeForSearch(textoABuscar);
+        const encontrado = textoPlanoNorm.includes(textoNorm);
 
-        if (textoPlanoNorm.includes(textoNorm)) {
-            // Extraer el número
-            const numero = extraerNumeroDelTexto(texto, textoABuscar);
+        // Extraer el número
+        const numero = encontrado
+            ? extraerNumeroDelTexto(texto, textoABuscar)
+            : null;
 
+        // Log limpio con información relevante del 2.pdf - SIEMPRE mostrar
+        console.log(
+            `\n📄 VALIDACIÓN ARCHIVO 2.pdf (PAQ)\n` +
+                `   Carpeta: ${carpeta}\n` +
+                `   Servicio: ${servicio}\n` +
+                `   Archivo: ${file.name}\n` +
+                `   Convenio: fomag\n` +
+                `   Texto buscado: "${textoABuscar}"\n` +
+                `   Cant. Auto encontrada: ${
+                    numero !== null ? numero : "NO ENCONTRADO"
+                }\n` +
+                `   Documento (${nroDocumento}): ${
+                    textoPlanoNorm.includes(nroDocumento)
+                        ? "✓ Encontrado"
+                        : "✗ NO encontrado"
+                }\n` +
+                `\n--- TEXTO COMPLETO DEL PDF ---\n${texto}\n--- FIN TEXTO ---\n`
+        );
+
+        if (encontrado) {
             if (numero !== null) {
                 // Guardar el número para validar después
                 resultados[carpeta].numerosPorServicio =
@@ -635,13 +713,13 @@ async function validarArchivo2Fomag(
  */
 function obtenerTextoServicioFomag(servicio) {
     const textos = {
-        TF: "ATENCION [VISITA] DOMICILIARIA POR",
-        TR: "TERAPIA RESPIRATORIA",
+        TF: "ATENCION (VISITA) DOMICILIARIA, POR FISIOTERAPIA",
+        TR: "ATENCION (VISITA) DOMICILIARIA, POR TERAPIA RESPIRATORIA",
         SUCCION: "TERAPIA SUCCION",
-        VM: "VALORACION MEDICA",
-        ENF: "ENFERMERIA",
-        PSI: "PSICOLOGIA",
-        TS: "TRABAJO SOCIAL",
+        VM: "ATENCION (VISITA) DOMICILIARIA, POR MEDICINA GENERAL",
+        ENF: "ATENCION (VISITA) DOMICILIARIA, POR ENFERMERIA",
+        PSI: "ATENCION (VISITA) DOMICILIARIA, POR PSICOLOGIA",
+        TS: "ATENCION (VISITA) DOMICILIARIA, POR TRABAJO SOCIAL",
     };
     return textos[servicio] || null;
 }

@@ -15,16 +15,16 @@
             <label for="tipoValidacion">Tipo de validación</label>
             <select id="tipoValidacion">
                 <option value="evento">📋 Por evento</option>
-                <option value="paquete">📦 Por paquete</option>
+                <option value="paquete" selected>📦 Por paquete</option>
             </select>
         </div>
 
-        <div id="paqueteOptions" class="paquete-options oculto">
+        <div id="paqueteOptions" class="paquete-options">
             <div class="select-wrapper">
                 <label for="tipoPaquete">Tipo de paquete</label>
                 <select id="tipoPaquete">
                     <option value="cronico">🏥 Crónico</option>
-                    <option value="cronico-terapias">💊 Crónico con terapias</option>
+                    <option value="cronico-terapias" selected>💊 Crónico con terapias</option>
                 </select>
             </div>
         </div>
@@ -33,7 +33,7 @@
             <label for="convenio">Convenio</label>
             <select id="convenio">
                 <option value="capital-salud">🏢 Capital Salud</option>
-                <option value="fomag">🏛️ FOMAG</option>
+                <option value="fomag" selected>🏛️ FOMAG</option>
             </select>
         </div>
     </div>
@@ -43,7 +43,94 @@
         <input type="file" id="inputFolder" webkitdirectory directory multiple />
     </label>
 
+    <button id="btnLimpiar" class="btn-limpiar-todo oculto">🗑️ Limpiar todo</button>
+
     <div id="estado" class="estado oculto"></div>
+
+    <!-- Barra de progreso -->
+    <div id="barraProgreso" class="barra-progreso oculto">
+        <div class="progreso-header">
+            <div class="progreso-info">
+                <span id="progresoTexto">Procesando...</span>
+                <span id="progresoDetalle" class="progreso-detalle"></span>
+            </div>
+            <span id="progresoPorcentaje" class="progreso-porcentaje">0%</span>
+        </div>
+        <div class="progreso-barra">
+            <div id="progresoFill" class="progreso-fill"></div>
+        </div>
+    </div>
+
+    <!-- Resumen de validación -->
+    <div id="resumen" class="resumen oculto">
+        <h3>📊 Resumen de Validación</h3>
+        <div class="resumen-container">
+            <!-- Columna izquierda: Estadísticas generales -->
+            <div class="resumen-general">
+                <div class="resumen-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Total carpetas:</span>
+                        <span class="stat-value" id="statTotal">0</span>
+                    </div>
+                    <div class="stat-item success">
+                        <span class="stat-label">✔ Sin errores:</span>
+                        <span class="stat-value" id="statExito">0</span>
+                    </div>
+                    <div class="stat-item warning">
+                        <span class="stat-label">⚠ Con alertas:</span>
+                        <span class="stat-value" id="statAlertas">0</span>
+                    </div>
+                    <div class="stat-item error">
+                        <span class="stat-label">✖ Con errores:</span>
+                        <span class="stat-value" id="statErrores">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Columna derecha: Errores por tipo -->
+            <div id="resumenErrores" class="resumen-errores oculto">
+                <h4>📄 Errores por tipo</h4>
+                <div id="listaErrores" class="lista-errores"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de búsqueda y filtros -->
+    <div id="filtros" class="filtros oculto">
+        <div class="filtro-item">
+            <label for="buscarDocumento">🔍 Buscar por documento:</label>
+            <input type="text" id="buscarDocumento" placeholder="Ingrese número de documento..." />
+        </div>
+        <div class="filtro-item">
+            <label for="filtroEstado">📊 Filtrar por estado:</label>
+            <select id="filtroEstado">
+                <option value="">📋 Todos los estados</option>
+                <option value="sin-errores">✅ Sin errores</option>
+                <option value="con-alertas">⚠️ Con alertas</option>
+                <option value="con-errores">❌ Con errores</option>
+            </select>
+        </div>
+        <div class="filtro-item">
+            <label for="filtroServicio">🏥 Filtrar por servicio:</label>
+            <select id="filtroServicio">
+                <option value="">🎯 Todos los servicios</option>
+                <option value="VM">🩺 VM - Visita Médica</option>
+                <option value="ENF">💉 ENF - Enfermería</option>
+                <option value="TF">🏃 TF - Terapia Física</option>
+                <option value="TR">🫁 TR - Terapia Respiratoria</option>
+                <option value="SUCCION">🌬️ SUCCION - Terapia Succión</option>
+                <option value="PSI">🧠 PSI - Psicología</option>
+                <option value="TS">👥 TS - Trabajo Social</option>
+            </select>
+        </div>
+        <div class="filtro-item checkbox-item destacado">
+            <label>
+                <input type="checkbox" id="mostrarExitos" checked />
+                ✓ Mostrar validaciones exitosas
+            </label>
+        </div>
+        <button id="limpiarFiltros" class="btn-limpiar">🔄 Limpiar filtros</button>
+    </div>
 
     <div class="table-wrapper">
         <table id="tabla">
@@ -62,6 +149,19 @@
             </thead>
             <tbody id="tablaBody"></tbody>
         </table>
+    </div>
+</div>
+
+<!-- Modal para mostrar PDFs -->
+<div id="pdfModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="pdfModalTitle">PDF</h2>
+            <span class="modal-close" onclick="cerrarModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <iframe id="pdfFrame" src="" frameborder="0"></iframe>
+        </div>
     </div>
 </div>
 

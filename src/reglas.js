@@ -14,35 +14,38 @@
 
 const REGLAS_ARCHIVO_5 = {
     TF: {
-        debeContener: "Registro De Terapia Física",
+        debeContener: ["Registro De Terapia Física"],
         igualarConFechas: true,
     },
     TR: {
-        debeContener: "Registro De: Terapia Respiratoria",
+        debeContener: ["Registro De: Terapia Respiratoria"],
         igualarConFechas: true,
     },
     SUCCION: {
-        debeContener: "REGISTRO DE TERAPIA SUCCION",
+        debeContener: ["REGISTRO DE TERAPIA SUCCION"],
         igualarConFechas: true,
     },
     VM: {
-        debeContener: "Registro De Historia Clínica",
+        debeContener: [
+            "Registro De Historia Clínica",
+            "Registro De Evolución Médica",
+        ],
         igualarConFechas: true,
     },
     ENF: {
-        debeContener: "Registro De Enfermería - Actividades",
+        debeContener: ["Registro De Enfermería - Actividades"],
         igualarConFechas: true,
     },
     PSI: {
-        debeContener: "Registro De Psicología",
+        debeContener: ["Registro De Psicología"],
         igualarConFechas: true,
     },
     TS: {
-        debeContener: "Registro De Trabajo Social",
+        debeContener: ["Registro De Trabajo Social"],
         igualarConFechas: true,
     },
     TO: {
-        debeContener: "Registro De Terapia Ocupacional",
+        debeContener: ["Registro De Terapia Ocupacional"],
         igualarConFechas: true,
     },
 };

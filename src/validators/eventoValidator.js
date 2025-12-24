@@ -43,12 +43,30 @@ export async function validarPDF(
         resultados[carpeta].fechas.push(...fechas);
 
         // Validar número de documento
-        if (["2.pdf", "3.pdf", "5.pdf"].includes(file.name)) {
+        // Para FOMAG: validar en 2.pdf y 5.pdf
+        // Para otros convenios: validar en 2.pdf, 3.pdf y 5.pdf
+        const archivosAValidar =
+            convenio === "fomag"
+                ? ["2.pdf", "5.pdf"]
+                : ["2.pdf", "3.pdf", "5.pdf"];
+
+        if (archivosAValidar.includes(file.name)) {
             if (!textoPlanoNorm.includes(nroDocumento)) {
                 resultados[carpeta].errores.push(
                     `${file.name}: no contiene número ${nroDocumento}`
                 );
                 resultados[carpeta].pdfs[file.name] = "❌";
+                console.log(
+                    `❌ ${carpeta} - ${file.name}: Documento ${nroDocumento} NO encontrado`
+                );
+            } else {
+                // Agregar mensaje de éxito cuando se encuentra el documento
+                resultados[carpeta].errores.push(
+                    `✓ ${file.name}: contiene número ${nroDocumento}`
+                );
+                console.log(
+                    `✓ ${carpeta} - ${file.name}: Documento ${nroDocumento} encontrado`
+                );
             }
         }
 
@@ -59,36 +77,58 @@ export async function validarPDF(
         if (tipo && REGLAS_EVENTO[tipo]) {
             const regla = REGLAS_EVENTO[tipo][file.name];
             if (regla) {
-                const buscar = regla.debeContener;
-                const buscarNorm = normalizeForSearch(buscar);
-                const safe = escapeRegExp(buscarNorm);
-                const vecesTexto = (
-                    textoPlanoNorm.match(new RegExp(safe, "g")) || []
-                ).length;
+                // Convertir debeContener a array si no lo es (compatibilidad)
+                const textosABuscar = Array.isArray(regla.debeContener)
+                    ? regla.debeContener
+                    : [regla.debeContener];
 
-                if (!textoPlanoNorm.includes(buscarNorm)) {
+                let textoEncontrado = null;
+                let vecesTexto = 0;
+
+                // Buscar cualquiera de los textos
+                for (const buscar of textosABuscar) {
+                    const buscarNorm = normalizeForSearch(buscar);
+                    const safe = escapeRegExp(buscarNorm);
+                    const veces = (
+                        textoPlanoNorm.match(new RegExp(safe, "g")) || []
+                    ).length;
+
+                    if (veces > 0) {
+                        textoEncontrado = buscar;
+                        vecesTexto = veces;
+                        break;
+                    }
+                }
+
+                if (!textoEncontrado) {
                     // Para debug: mostrar todo el texto del PDF
                     console.log(`❌ ERROR en ${file.name} (${tipo}):`);
-                    console.log(`   Buscando: "${buscarNorm}"`);
+                    console.log(
+                        `   Buscando alguno de: ${textosABuscar
+                            .map((t) => `"${t}"`)
+                            .join(" o ")}`
+                    );
                     console.log(`   Texto completo del PDF normalizado:`);
                     console.log(textoPlanoNorm);
 
                     resultados[carpeta].errores.push(
-                        `${file.name}: falta "${regla.debeContener}"`
+                        `${file.name}: falta alguno de: ${textosABuscar.join(
+                            " o "
+                        )}`
                     );
                     resultados[carpeta].pdfs[file.name] = "❌";
                 } else {
                     console.log(
-                        `✓ Éxito en ${file.name} (${tipo}): encontrado "${buscarNorm}"`
+                        `✓ Éxito en ${file.name} (${tipo}): encontrado "${textoEncontrado}"`
                     );
                 }
 
                 // Para FOMAG: extraer el número que aparece después del texto
                 let numeroExtraido = null;
-                if (regla.extraerNumero) {
+                if (regla.extraerNumero && textoEncontrado) {
                     numeroExtraido = extraerNumeroDelTexto(
                         texto,
-                        regla.debeContener
+                        textoEncontrado
                     );
                     if (numeroExtraido !== null) {
                         // Guardar el número extraído en resultados para mostrarlo
