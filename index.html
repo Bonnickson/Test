@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Validador de PDFs</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="card">
+    <h1>Validador de Carpetas PDF</h1>
+
+    <div class="config-section">
+        <div class="select-wrapper">
+            <label for="tipoValidacion">Tipo de validación</label>
+            <select id="tipoValidacion">
+                <option value="evento">📋 Por evento</option>
+                <option value="paquete">📦 Por paquete</option>
+            </select>
+        </div>
+
+        <div id="paqueteOptions" class="paquete-options oculto">
+            <div class="select-wrapper">
+                <label for="tipoPaquete">Tipo de paquete</label>
+                <select id="tipoPaquete">
+                    <option value="cronico">🏥 Crónico</option>
+                    <option value="cronico-terapias">💊 Crónico con terapias</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <label class="file">
+        📁 Seleccionar carpeta
+        <input type="file" id="inputFolder" webkitdirectory directory multiple />
+    </label>
+
+    <div id="estado" class="estado oculto"></div>
+
+    <table id="tabla">
+        <thead id="tablaHeader">
+            <tr>
+                <th>Tipo</th>
+                <th>Carpeta</th>
+                <th>2.pdf</th>
+                <th>3.pdf</th>
+                <th>4.pdf</th>
+                <th>5.pdf</th>
+                <th>Cant.</th>
+                <th>Fechas (cantidad y detalle)</th>
+                <th>Errores</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
