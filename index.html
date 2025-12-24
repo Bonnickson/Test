@@ -28,6 +28,14 @@
                 </select>
             </div>
         </div>
+
+        <div class="select-wrapper">
+            <label for="convenio">Convenio</label>
+            <select id="convenio">
+                <option value="capital-salud">🏢 Capital Salud</option>
+                <option value="fomag">🏛️ FOMAG</option>
+            </select>
+        </div>
     </div>
 
     <label class="file">
@@ -37,24 +45,26 @@
 
     <div id="estado" class="estado oculto"></div>
 
-    <table id="tabla">
-        <thead id="tablaHeader">
-            <tr>
-                <th>Tipo</th>
-                <th>Carpeta</th>
-                <th>2.pdf</th>
-                <th>3.pdf</th>
-                <th>4.pdf</th>
-                <th>5.pdf</th>
-                <th>Cant.</th>
-                <th>Fechas (cantidad y detalle)</th>
-                <th>Errores</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+    <div class="table-wrapper">
+        <table id="tabla">
+            <thead id="tablaHeader">
+                <tr>
+                    <th>Tipo</th>
+                    <th>Carpeta</th>
+                    <th>2.pdf</th>
+                    <th>3.pdf</th>
+                    <th>4.pdf</th>
+                    <th>5.pdf</th>
+                    <th>Cant.</th>
+                    <th>Fechas (cantidad y detalle)</th>
+                    <th>Errores</th>
+                </tr>
+            </thead>
+            <tbody id="tablaBody"></tbody>
+        </table>
+    </div>
 </div>
 
-<script type="module" src="app.js"></script>
+<script type="module" src="src/app.js"></script>
 </body>
 </html>

@@ -122,16 +122,42 @@ h1 {
 
 /* ================= TABLA ================= */
 
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 14px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+/* Scrollbar personalizado para mejor UX */
+.table-wrapper::-webkit-scrollbar {
+    height: 10px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 14px;
     font-size: 13px;
-    table-layout: fixed;
+    table-layout: auto;
     border-radius: 10px;
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
     background: white;
+    min-width: 800px;
 }
 
 th,
@@ -148,6 +174,19 @@ th {
     text-transform: uppercase;
     font-weight: 700;
     color: #1f2937;
+    white-space: nowrap;
+    padding: 8px 12px;
+}
+
+.header-row-main th {
+    background: #e5e7eb;
+    font-size: 12px;
+}
+
+.header-row-sub th {
+    background: #f1f5f9;
+    font-size: 10px;
+    font-weight: 600;
 }
 
 table.modo-evento th,
@@ -170,83 +209,24 @@ tbody tr:hover td {
 table.modo-evento th:nth-child(1),
 table.modo-evento td:nth-child(1) {
     width: 80px;
+    min-width: 80px;
 }
-table.modo-evento th:nth-child(2),
-table.modo-evento td:nth-child(2) {
-    width: 160px;
-}
-table.modo-evento th:nth-child(3),
-table.modo-evento td:nth-child(3),
-table.modo-evento th:nth-child(4),
-table.modo-evento td:nth-child(4),
-table.modo-evento th:nth-child(5),
-table.modo-evento td:nth-child(5),
-table.modo-evento th:nth-child(6),
-table.modo-evento td:nth-child(6) {
-    width: 80px;
-}
-table.modo-evento th:nth-child(7),
-table.modo-evento td:nth-child(7) {
-    width: 90px;
-}
-table.modo-evento th:nth-child(8),
-table.modo-evento td:nth-child(8) {
-    width: 280px;
-}
-table.modo-evento th:nth-child(9),
-table.modo-evento td:nth-child(9) {
-    width: 340px;
-}
+/* Las demás columnas se adaptan al contenido */
 
 table.modo-paquete-fijo th:nth-child(1),
 table.modo-paquete-fijo td:nth-child(1) {
     width: 80px;
+    min-width: 80px;
 }
-table.modo-paquete-fijo th:nth-child(2),
-table.modo-paquete-fijo td:nth-child(2) {
-    width: 160px;
-}
-table.modo-paquete-fijo th:nth-child(3),
-table.modo-paquete-fijo td:nth-child(3),
-table.modo-paquete-fijo th:nth-child(4),
-table.modo-paquete-fijo td:nth-child(4),
-table.modo-paquete-fijo th:nth-child(5),
-table.modo-paquete-fijo td:nth-child(5),
-table.modo-paquete-fijo th:nth-child(6),
-table.modo-paquete-fijo td:nth-child(6),
-table.modo-paquete-fijo th:nth-child(7),
-table.modo-paquete-fijo td:nth-child(7),
-table.modo-paquete-fijo th:nth-child(8),
-table.modo-paquete-fijo td:nth-child(8) {
-    width: 72px;
-}
-table.modo-paquete-fijo th:nth-child(9),
-table.modo-paquete-fijo td:nth-child(9),
-table.modo-paquete-fijo th:nth-child(10),
-table.modo-paquete-fijo td:nth-child(10) {
-    width: 200px;
-}
-table.modo-paquete-fijo th:nth-child(11),
-table.modo-paquete-fijo td:nth-child(11) {
-    width: 300px;
-}
+/* Las demás columnas se adaptan al contenido */
 
 table.modo-paquete-dinamico th:nth-child(1),
 table.modo-paquete-dinamico td:nth-child(1) {
-    width: 90px;
+    width: 80px;
+    min-width: 80px;
 }
-table.modo-paquete-dinamico th:nth-child(2),
-table.modo-paquete-dinamico td:nth-child(2) {
-    width: 170px;
-}
-table.modo-paquete-dinamico th:nth-child(3),
-table.modo-paquete-dinamico td:nth-child(3) {
-    width: 240px;
-}
-table.modo-paquete-dinamico th:nth-child(4),
-table.modo-paquete-dinamico td:nth-child(4) {
-    width: 260px;
-}
+/* Las demás columnas se adaptan al contenido */
+
 table.modo-paquete-dinamico th:nth-child(5),
 table.modo-paquete-dinamico td:nth-child(5) {
     width: 320px;
@@ -264,31 +244,33 @@ td.fechas {
 .fechas-list {
     display: flex;
     gap: 6px;
-    overflow-x: auto;
-    white-space: nowrap;
     align-items: center;
     padding: 3px 0;
+}
+
+.fechas-list.fechas-scroll {
+    overflow-x: auto;
+    white-space: nowrap;
+    max-width: 400px;
     /* scrollbar discrete */
     scrollbar-width: thin;
-    scrollbar-color: rgba(15, 23, 42, 0.06) transparent;
+    scrollbar-color: rgba(15, 23, 42, 0.12) transparent;
 }
 
 /* WebKit scrollbar (Chrome/Edge/Safari) */
-.fechas-list::-webkit-scrollbar {
+.fechas-list.fechas-scroll::-webkit-scrollbar {
     height: 4px;
 }
-.fechas-list::-webkit-scrollbar-track {
+.fechas-list.fechas-scroll::-webkit-scrollbar-track {
     background: transparent;
 }
-.fechas-list::-webkit-scrollbar-thumb {
-    background: rgba(15, 23, 42, 0.06);
-    border-radius: 3px;
-    transition: opacity 0.18s, background-color 0.18s;
-    opacity: 0;
-}
-.fechas-list:hover::-webkit-scrollbar-thumb {
-    opacity: 1;
+.fechas-list.fechas-scroll::-webkit-scrollbar-thumb {
     background: rgba(15, 23, 42, 0.12);
+    border-radius: 3px;
+    transition: background-color 0.18s;
+}
+.fechas-list.fechas-scroll:hover::-webkit-scrollbar-thumb {
+    background: rgba(15, 23, 42, 0.2);
 }
 .fecha-text {
     background: transparent;
@@ -329,6 +311,26 @@ td.errores {
     background: rgba(15, 23, 42, 0.02);
     border-radius: 6px;
     color: #dc2626;
+    font-size: 12px;
+}
+
+.exito-item {
+    display: block;
+    margin: 3px 0;
+    padding: 5px 7px;
+    background: rgba(16, 185, 129, 0.08);
+    border-radius: 6px;
+    color: #059669;
+    font-size: 12px;
+}
+
+.alerta-item {
+    display: block;
+    margin: 3px 0;
+    padding: 5px 7px;
+    background: rgba(245, 158, 11, 0.1);
+    border-radius: 6px;
+    color: #d97706;
     font-size: 12px;
 }
 
@@ -562,6 +564,63 @@ td.ok a, td.fail a, td.missing a {
 td.ok a:hover, td.fail a:hover {
     transform: scale(1.2);
     display: inline-block;
+}
+
+/* ================= TABLA INTERNA DE SERVICIOS ================= */
+.servicios-table-cell {
+    padding: 0 !important;
+    background: #fafbfc;
+}
+
+.servicios-inner-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+    table-layout: auto;
+}
+
+.servicios-inner-table tbody tr {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.servicios-inner-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.servicios-inner-table td {
+    padding: 6px 10px;
+    font-size: 11px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.servicio-nombre {
+    font-weight: 500;
+    color: #0f172a;
+    text-align: left;
+}
+
+.servicio-cant5 {
+    font-weight: 600;
+    color: #2563eb;
+    text-align: center;
+}
+
+.servicio-archivos {
+    text-align: center;
+}
+
+.servicio-cant2 {
+    font-weight: 600;
+    color: #059669;
+    text-align: center;
+}
+
+.servicio-fechas {
+    font-size: 10px;
+    color: #64748b;
+    text-align: left;
+    white-space: normal;
 }
 
 /* Estilos originales para modo evento */
