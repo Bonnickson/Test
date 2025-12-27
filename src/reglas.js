@@ -25,6 +25,10 @@ const REGLAS_ARCHIVO_5 = {
         debeContener: ["REGISTRO DE TERAPIA SUCCION"],
         igualarConFechas: true,
     },
+    FON: {
+        debeContener: ["Registro De Fonoaudiología"],
+        igualarConFechas: true,
+    },
     VM: {
         debeContener: [
             "Registro De Historia Clínica",
@@ -65,6 +69,11 @@ const REGLAS_ARCHIVO_2_CAPITAL = {
     },
     TR: { debeContener: "TERAPIA RESPIRATORIA", igualarConFechas: false },
     SUCCION: { debeContener: "TERAPIA SUCCION", igualarConFechas: false },
+    FON: {
+        debeContener:
+            "ATENCION (VISITA) DOMICILIARIA, POR FONIATRIA Y FONOAUDIOLOGIA",
+        igualarConFechas: false,
+    },
     VM: { debeContener: "VALORACION MEDICA", igualarConFechas: false },
     ENF: { debeContener: "ENFERMERIA", igualarConFechas: false },
     PSI: { debeContener: "PSICOLOGIA", igualarConFechas: false },
@@ -88,6 +97,12 @@ const REGLAS_ARCHIVO_2_FOMAG = {
     },
     SUCCION: {
         debeContener: "TERAPIA SUCCION",
+        igualarConFechas: true,
+        extraerNumero: true,
+    },
+    FON: {
+        debeContener:
+            "ATENCION (VISITA) DOMICILIARIA, POR FONIATRIA Y FONOAUDIOLOGIA",
         igualarConFechas: true,
         extraerNumero: true,
     },
@@ -142,6 +157,7 @@ export function obtenerReglasEvento(convenio) {
             "2.pdf": reglas2.SUCCION,
             "5.pdf": REGLAS_ARCHIVO_5.SUCCION,
         },
+        FON: { "2.pdf": reglas2.FON, "5.pdf": REGLAS_ARCHIVO_5.FON },
         VM: { "2.pdf": reglas2.VM, "5.pdf": REGLAS_ARCHIVO_5.VM },
         ENF: { "2.pdf": reglas2.ENF, "5.pdf": REGLAS_ARCHIVO_5.ENF },
         PSI: { "2.pdf": reglas2.PSI, "5.pdf": REGLAS_ARCHIVO_5.PSI },
@@ -164,27 +180,37 @@ export function obtenerReglasPaquete(convenio) {
             ? REGLAS_ARCHIVO_2_FOMAG
             : REGLAS_ARCHIVO_2_CAPITAL;
 
-    // En paquetes, SIEMPRE se compara el número del 2.pdf con las fechas del 5.pdf
+    const comparar = convenio === "fomag"; // Solo FOMAG compara autorizaciones vs evoluciones
+
+    // Preparar reglas para 2.pdf según convenio
     const reglas2Paquete = {};
     for (const servicio in reglas2Base) {
         reglas2Paquete[servicio] = {
             ...reglas2Base[servicio],
-            igualarConFechas: true, // Forzar comparación en modo paquete
+            igualarConFechas: comparar,
         };
     }
 
+    // Preparar reglas para 5.pdf: clonar y ajustar igualarConFechas según convenio
+    const reglas5Paquete = {};
+    for (const servicio in REGLAS_ARCHIVO_5) {
+        const r5 = REGLAS_ARCHIVO_5[servicio];
+        reglas5Paquete[servicio] = { ...r5, igualarConFechas: comparar };
+    }
+
     return {
-        TF: { "2.pdf": reglas2Paquete.TF, "5.pdf": REGLAS_ARCHIVO_5.TF },
-        TR: { "2.pdf": reglas2Paquete.TR, "5.pdf": REGLAS_ARCHIVO_5.TR },
+        TF: { "2.pdf": reglas2Paquete.TF, "5.pdf": reglas5Paquete.TF },
+        TR: { "2.pdf": reglas2Paquete.TR, "5.pdf": reglas5Paquete.TR },
         SUCCION: {
             "2.pdf": reglas2Paquete.SUCCION,
-            "5.pdf": REGLAS_ARCHIVO_5.SUCCION,
+            "5.pdf": reglas5Paquete.SUCCION,
         },
-        VM: { "2.pdf": reglas2Paquete.VM, "5.pdf": REGLAS_ARCHIVO_5.VM },
-        ENF: { "2.pdf": reglas2Paquete.ENF, "5.pdf": REGLAS_ARCHIVO_5.ENF },
-        PSI: { "2.pdf": reglas2Paquete.PSI, "5.pdf": REGLAS_ARCHIVO_5.PSI },
-        TS: { "2.pdf": reglas2Paquete.TS, "5.pdf": REGLAS_ARCHIVO_5.TS },
-        TO: { "2.pdf": reglas2Paquete.TO, "5.pdf": REGLAS_ARCHIVO_5.TO },
+        FON: { "2.pdf": reglas2Paquete.FON, "5.pdf": reglas5Paquete.FON },
+        VM: { "2.pdf": reglas2Paquete.VM, "5.pdf": reglas5Paquete.VM },
+        ENF: { "2.pdf": reglas2Paquete.ENF, "5.pdf": reglas5Paquete.ENF },
+        PSI: { "2.pdf": reglas2Paquete.PSI, "5.pdf": reglas5Paquete.PSI },
+        TS: { "2.pdf": reglas2Paquete.TS, "5.pdf": reglas5Paquete.TS },
+        TO: { "2.pdf": reglas2Paquete.TO, "5.pdf": reglas5Paquete.TO },
     };
 }
 

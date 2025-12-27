@@ -126,6 +126,40 @@ h1 {
     box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
 }
 
+/* Botón descargar XLSX */
+.btn-descargar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 16px;
+    background: #111827;
+    color: #ffffff;
+    border: 1px solid #0b1220;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+    transition: transform 0.08s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.btn-descargar:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+    filter: brightness(1.04);
+}
+
+.btn-descargar:active {
+    transform: translateY(0);
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);
+    filter: brightness(0.98);
+}
+
+.btn-descargar.oculto {
+    display: none;
+}
+
 .btn-limpiar-todo:hover {
     background: #b91c1c;
     transform: translateY(-1px);
@@ -317,6 +351,17 @@ h1 {
     background: #fef2f2;
     border-radius: 4px;
     font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.error-tipo-item:hover {
+    background: #fee2e2;
+}
+
+.error-tipo-item.selected {
+    background: #dbeafe;
+    box-shadow: inset 0 0 0 2px #3b82f6;
 }
 
 .error-tipo-texto {
@@ -523,10 +568,10 @@ h1 {
 
 table {
     width: 100%;
-    border-collapse: separate;
+    border-collapse: collapse;
     border-spacing: 0;
     font-size: 13px;
-    table-layout: auto;
+    table-layout: fixed;
     background: white;
     min-width: 800px;
 }
@@ -534,8 +579,9 @@ table {
 th,
 td {
     border: 1px solid #e5e7eb;
-    padding: 8px 8px;
+    padding: 10px 12px;
     text-align: center;
+    vertical-align: middle;
 }
 
 td.servicio-nombre {
@@ -591,52 +637,88 @@ tbody tr:hover td {
 }
 
 tbody tr.selected td {
-    background: #e8eef3 !important;
+    background: #fef3c7 !important;
 }
 
 tbody tr.selected:hover td {
-    background: #dce4ec !important;
+    background: #fde68a !important;
 }
 
-/* Anchos por modo */
+/* Anchos por modo - ahora manejados por colgroup */
 table.modo-evento th:nth-child(1),
 table.modo-evento td:nth-child(1) {
-    width: 80px;
-    min-width: 80px;
+    width: 100px;
 }
-/* Las demás columnas se adaptan al contenido */
-
-table.modo-paquete-fijo th:nth-child(1),
-table.modo-paquete-fijo td:nth-child(1) {
-    width: 80px;
-    min-width: 80px;
-}
-/* Las demás columnas se adaptan al contenido */
 
 table.modo-paquete-dinamico th:nth-child(1),
 table.modo-paquete-dinamico td:nth-child(1) {
-    width: 80px;
-    min-width: 80px;
+    width: 100px;
 }
-/* Las demás columnas se adaptan al contenido */
 
-table.modo-paquete-dinamico th:nth-child(5),
-table.modo-paquete-dinamico td:nth-child(5) {
-    width: 200px;
-    max-width: 200px;
+/* Alternar colores de fondo por GRUPO de carpeta - CONTRASTE CLARO */
+.paquete-row.grupo-par td {
+    background: #ffffff;
+}
+
+.paquete-row.grupo-impar td {
+    background: #f0f9ff;
+}
+
+/* Espaciado entre grupos */
+.paquete-row.grupo-inicio td {
+    padding-top: 12px !important;
+}
+
+.paquete-row.grupo-fin td {
+    padding-bottom: 12px !important;
+}
+
+/* Separador MUY VISIBLE entre grupos diferentes */
+.paquete-row.grupo-inicio:not(:first-child) {
+    border-top: 4px solid #94a3b8;
+}
+
+/* Barra lateral de color para cada grupo */
+.paquete-row.grupo-par td:first-child {
+    border-left: 5px solid #6366f1;
+}
+
+.paquete-row.grupo-impar td:first-child {
+    border-left: 5px solid #06b6d4;
+}
+
+/* Efecto hover */
+.paquete-row:hover td {
+    filter: brightness(0.95);
+    transition: filter 0.15s ease;
+}
+
+/* Color al seleccionar una fila */
+.paquete-row.selected td {
+    background: #fef3c7 !important;
+    border-left-color: #f59e0b !important;
+}
+
+.paquete-row.selected:hover td {
+    background: #fde68a !important;
+}
+
+/* Estilo de celdas de tipo y carpeta */
+table.modo-paquete-dinamico td:nth-child(1),
+table.modo-paquete-dinamico td:nth-child(2) {
+    font-weight: 600;
+    color: #334155;
 }
 
 td.fechas {
     font-size: 11px;
     color: #1e3a8a;
     text-align: left;
-    max-width: 120px;
-    width: 120px;
     white-space: normal;
     line-height: 1.25;
     word-break: break-word;
-    overflow: hidden;
-    padding: 4px 6px;
+    overflow: visible;
+    padding: 6px 8px;
 }
 .fechas-list {
     display: flex;
@@ -645,13 +727,14 @@ td.fechas {
     padding: 3px 0;
     flex-wrap: wrap;
     max-width: 100%;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .fechas-list.fechas-scroll {
     overflow-x: auto;
     white-space: nowrap;
-    max-width: 108px;
+    width: 100%;
+    max-width: 100%;
     flex-wrap: nowrap;
     /* scrollbar discrete */
     scrollbar-width: thin;
@@ -701,8 +784,8 @@ td.errores {
     background: transparent;
     padding: 6px 8px;
     border-left: 4px solid rgba(15, 23, 42, 0.06);
-    line-height: 1.25;
-    max-width: 700px;
+    line-height: 1.35;
+    overflow: visible;
 }
 
 .error-item {
@@ -1141,4 +1224,283 @@ td.fail a:hover {
     background: #fbecec;
     color: #991b1b;
     border: 1px solid #f3d0d0;
+}
+
+/* ====== Carpeta cell hover actions ====== */
+.carpeta-cell {
+    position: relative;
+}
+.carpeta-actions {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: none;
+    gap: 6px;
+}
+.carpeta-cell:hover .carpeta-actions {
+    display: inline-flex;
+}
+.copy-btn {
+    padding: 2px 6px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #f7f7f7;
+    cursor: pointer;
+}
+.copy-btn:hover {
+    background: #eee;
+}
+
+/* Inline copy icon next to folder name */
+.copy-inline-btn {
+    margin-left: 6px;
+    padding: 0 6px;
+    height: 18px;
+    line-height: 18px;
+    font-size: 12px;
+    border: 1px solid #dcdcdc;
+    border-radius: 10px;
+    background: #fafafa;
+    cursor: pointer;
+}
+.copy-inline-btn:hover {
+    background: #f0f0f0;
+}
+
+/* Tooltip for copy */
+.tooltip-copy {
+    position: absolute;
+    z-index: 9999;
+    background: #111827;
+    color: #ffffff;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -150%);
+    animation: tooltipFade 1400ms ease forwards;
+}
+@keyframes tooltipFade {
+    0% {
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    80% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+/* ====== Header row and help button ====== */
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.btn-ayuda {
+    padding: 6px 10px;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fafafa;
+    cursor: pointer;
+}
+.btn-ayuda:hover {
+    background: #f0f0f0;
+}
+#helpModal .help-filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.filter-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #f1f5f9;
+    color: #334155;
+    cursor: pointer;
+}
+.filter-btn.active {
+    background: #e0e7ff;
+    color: #3730a3;
+    border-color: #c7d2fe;
+}
+
+/* Help content */
+.help-content {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Subtle folder content listing */
+.carpeta-contenido {
+    margin-top: 4px;
+    font-size: 10px;
+    color: #8a8a8a;
+    max-height: 3.5em;
+    overflow: hidden;
+    display: none;
+}
+.carpeta-cell:hover .carpeta-contenido {
+    display: block;
+}
+.archivo-mini {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 1px 4px;
+    border: 1px dashed #e6e6e6;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.03);
+}
+
+/* Help modal enhanced visuals */
+#helpModal .modal-content {
+    max-width: 820px;
+}
+#helpModal .help-content h3 {
+    margin: 12px 0 6px;
+}
+#helpModal .help-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+}
+#helpModal .help-card {
+    background: linear-gradient(180deg, #ffffff 0%, #fbfbff 100%);
+    border: 1px solid #e6e8f0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 2px 8px rgba(30, 41, 59, 0.06);
+    position: relative;
+}
+#helpModal .help-card h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+}
+#helpModal .help-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+#helpModal .help-list li {
+    margin: 6px 0;
+}
+#helpModal .help-list li::before {
+    content: "› ";
+    color: #9aa0a6;
+    margin-right: 2px;
+}
+
+#helpModal .help-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 6px 0 8px;
+}
+.badge {
+    display: inline-block;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+}
+#helpModal .help-content .example {
+    background: #f8f9fb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+}
+
+/* Chips for nicer examples */
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.chip {
+    display: inline-block;
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #3730a3;
+    border: 1px solid #e0e7ff;
+}
+/* ================= MODAL PROGRESO DESCARGA ================= */
+.modal-progreso-bajada {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.modal-progreso-bajada.oculto {
+    display: none;
+}
+
+.modal-progreso-bajada-contenido {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.modal-progreso-bajada-contenido h3 {
+    margin: 0 0 20px 0;
+    color: #0f172a;
+    font-size: 18px;
+}
+
+.progreso-barra-bajada {
+    width: 100%;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.progreso-fill-bajada {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 999px;
+}
+
+.progreso-info-bajada {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: #64748b;
+}
+
+#progresoPorcentajeBajada {
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 14px;
 }

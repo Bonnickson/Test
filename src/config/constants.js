@@ -3,27 +3,30 @@
 export const DEBUG = true;
 
 export const ALLOWED_TYPES = [
-    "TR",
-    "SUCCION",
-    "TF",
     "VM",
     "ENF",
-    "PSI",
-    "TS",
+    "TF",
+    "TR",
+    "SUCCION",
     "TO",
+    "TS",
+    "PSI",
+    "FON",
 ];
 
-export const SERVICIOS_TERAPIA = ["TF", "TR", "SUCCION"];
+export const SERVICIOS_TERAPIA = ["TF", "TR", "SUCCION", "TO", "FON"];
 
 export const SERVICIOS_NOMBRES = {
+    General: "⚠️ General",
+    VM: "👨‍⚕️ Valoración Médica",
     ENF: "🩺 Enfermería",
-    PSI: "🧠 Psicología",
     TF: "🏃 Terapia Física",
     TR: "🫁 Terapia Respiratoria",
-    TS: "🤝 Trabajo Social",
-    VM: "👨‍⚕️ Valoración Médica",
     SUCCION: "💨 Succión",
     TO: "🧘 Terapia Ocupacional",
+    TS: "🤝 Trabajo Social",
+    PSI: "🧠 Psicología",
+    FON: "🗣️ Fonoaudiología",
 };
 
 export const PDF_WORKER_URL =

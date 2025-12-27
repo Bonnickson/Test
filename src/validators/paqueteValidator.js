@@ -12,6 +12,81 @@ import { extraerTextoPDF, extraerFechas } from "../utils/pdfUtils.js";
 let primerServicioDebug = null;
 
 /**
+ * Valida que solo existan archivos permitidos en la carpeta de paquete
+ * @param {File[]} archivos - Array de archivos en la carpeta
+ * @param {Object} resultados - Objeto con los resultados de validación
+ * @param {string} carpeta - Nombre de la carpeta
+ * @param {string} convenio - Convenio seleccionado ('capital-salud' o 'fomag')
+ */
+export function validarArchivosPermitidosPaquete(
+    archivos,
+    resultados,
+    carpeta,
+    convenio
+) {
+    const archivosNoPermitidos = [];
+    const serviciosValidos = [
+        "vm",
+        "enf",
+        "tf",
+        "tr",
+        "succion",
+        "suc",
+        "ts",
+        "psi",
+        "to",
+        "fon",
+    ];
+
+    for (const archivo of archivos) {
+        const nombreLower = archivo.name.toLowerCase();
+
+        // Patrón válido: "2 vm.pdf", "4 enf.pdf", etc.
+        const patronServicio =
+            /^[2-5]\s+(vm|enf|tf|tr|succion|suc|ts|psi|to|fon)\.pdf$/;
+
+        // Patrón válido solo para FOMAG: "2 paq.pdf"
+        const patron2Paq = /^2\s+paq\.pdf$/;
+
+        const esArchivoValido =
+            patronServicio.test(nombreLower) ||
+            (convenio === "fomag" && patron2Paq.test(nombreLower));
+
+        if (!esArchivoValido) {
+            archivosNoPermitidos.push(archivo.name);
+        }
+    }
+
+    if (archivosNoPermitidos.length > 0) {
+        // Agregar "General" como servicio
+        resultados[carpeta].servicios.add("General");
+
+        // Inicializar arrays para el servicio General
+        resultados[carpeta].erroresPorServicio["General"] =
+            resultados[carpeta].erroresPorServicio["General"] || [];
+        resultados[carpeta].exitosPorServicio["General"] =
+            resultados[carpeta].exitosPorServicio["General"] || [];
+        resultados[carpeta].alertasPorServicio["General"] =
+            resultados[carpeta].alertasPorServicio["General"] || [];
+        resultados[carpeta].fechasPorServicio["General"] =
+            resultados[carpeta].fechasPorServicio["General"] || [];
+
+        // Agregar los archivos no permitidos como errores del servicio General
+        archivosNoPermitidos.forEach((archivo) => {
+            resultados[carpeta].erroresPorServicio["General"].push(
+                `Archivo no permitido: ${archivo}`
+            );
+        });
+
+        console.log(
+            `❌ ${carpeta} - Archivos no permitidos encontrados: ${archivosNoPermitidos.join(
+                ", "
+            )}`
+        );
+    }
+}
+
+/**
  * Valida carpeta en modo paquete (crónico o crónico con terapias)
  */
 export async function validarPorPaquete(
@@ -27,8 +102,17 @@ export async function validarPorPaquete(
 ) {
     const nombres = archivos.map((a) => a.name);
 
+    // Validar archivos permitidos primero
+    validarArchivosPermitidosPaquete(archivos, resultados, carpeta, convenio);
+
     // Detectar servicios presentes
     const serviciosEncontrados = detectarServicios(nombres);
+
+    // Si ya existe el servicio "General", preservarlo
+    if (resultados[carpeta].servicios?.has("General")) {
+        serviciosEncontrados.add("General");
+    }
+
     resultados[carpeta].servicios = serviciosEncontrados;
 
     // Inicializar contenedores de fechas, errores, éxitos y alertas por servicio
@@ -66,8 +150,11 @@ export async function validarPorPaquete(
         );
     }
 
-    // Procesar cada servicio encontrado para validar PDFs
+    // Procesar cada servicio encontrado para validar PDFs (excepto "General")
     for (const servicio of serviciosEncontrados) {
+        // Saltar "General" ya que no tiene PDFs específicos para procesar
+        if (servicio === "General") continue;
+
         const servicioLower = servicio.toLowerCase();
 
         // IMPORTANTE: Procesar primero el 2.pdf para extraer número, luego 5 para comparar, luego 4
@@ -119,7 +206,7 @@ export async function validarPorPaquete(
                     ] !== "—"
                 ) {
                     estado.textContent = `Procesando: ${carpeta} / ${archivoParaProcesar.name} (${servicio})`;
-                    
+
                     // Actualizar barra de progreso si el callback está disponible
                     if (onProgresoArchivo) {
                         onProgresoArchivo(archivoParaProcesar.name);
@@ -149,7 +236,7 @@ function detectarServicios(nombres) {
     for (const nombre of nombres) {
         const nombreUpper = nombre.toUpperCase();
         const match = nombreUpper.match(
-            /\d+ (VM|ENF|TF|TR|SUCCION|SUC|TS|PSI)/
+            /\d+ (VM|ENF|TF|TR|SUCCION|SUC|TS|PSI|FON|TO)/
         );
         if (match) {
             let servicio = match[1];
@@ -171,8 +258,13 @@ function validarPaqueteCronico(
     archivos,
     convenio
 ) {
+    // Filtrar "General" para las validaciones de servicios
+    const serviciosReales = new Set(
+        [...serviciosEncontrados].filter((s) => s !== "General")
+    );
+
     const serviciosPermitidos = new Set(["VM", "ENF"]);
-    const serviciosNoPermitidos = [...serviciosEncontrados].filter(
+    const serviciosNoPermitidos = [...serviciosReales].filter(
         (s) => !serviciosPermitidos.has(s)
     );
 
@@ -184,12 +276,12 @@ function validarPaqueteCronico(
         );
     }
 
-    if (!serviciosEncontrados.has("VM")) {
+    if (!serviciosReales.has("VM")) {
         resultados[carpeta].errores.push(
             "Paquete Crónico debe incluir servicio VM"
         );
     }
-    if (!serviciosEncontrados.has("ENF")) {
+    if (!serviciosReales.has("ENF")) {
         resultados[carpeta].errores.push(
             "Paquete Crónico debe incluir servicio ENF"
         );
@@ -250,26 +342,31 @@ function validarPaqueteCronicoConTerapias(
     archivos,
     convenio
 ) {
-    if (!serviciosEncontrados.has("VM")) {
+    // Filtrar "General" para las validaciones de servicios
+    const serviciosReales = new Set(
+        [...serviciosEncontrados].filter((s) => s !== "General")
+    );
+
+    if (!serviciosReales.has("VM")) {
         resultados[carpeta].errores.push("Paquete debe incluir servicio VM");
     }
-    if (!serviciosEncontrados.has("ENF")) {
+    if (!serviciosReales.has("ENF")) {
         resultados[carpeta].errores.push("Paquete debe incluir servicio ENF");
     }
 
     // Verificar al menos una terapia
-    const terapiasEncontradas = [...serviciosEncontrados].filter((s) =>
+    const terapiasEncontradas = [...serviciosReales].filter((s) =>
         SERVICIOS_TERAPIA.includes(s)
     );
 
     if (terapiasEncontradas.length === 0) {
         resultados[carpeta].errores.push(
-            "Paquete debe incluir al menos un servicio de terapia (TF, TR o SUCCION)"
+            "Paquete debe incluir al menos un servicio de terapia (TF, TR, SUCCION, TO o FON)"
         );
     }
 
-    // Verificar archivos 2, 4, 5 para cada servicio
-    for (const servicio of serviciosEncontrados) {
+    // Verificar archivos 2, 4, 5 para cada servicio (excluyendo "General")
+    for (const servicio of serviciosReales) {
         const servicioLower = servicio.toLowerCase();
         resultados[carpeta].pdfsPorServicio[servicio] = {};
         resultados[carpeta].erroresPorServicio[servicio] ||= [];
@@ -698,7 +795,7 @@ async function validarArchivo2Fomag(
         const fechas5 = resultados[carpeta].fechasPorServicio[servicio] || [];
         if (numero !== fechas5.length) {
             resultados[carpeta].errores.push(
-                `${file.name}: Número declarado ${numero} ≠ Fechas archivo 5: ${fechas5.length}`
+                `${file.name}: Cant autorizaciones ${numero} ≠ cant evoluciones archivo 5: ${fechas5.length}`
             );
         }
     } else {
@@ -716,6 +813,7 @@ function obtenerTextoServicioFomag(servicio) {
         TF: "ATENCION (VISITA) DOMICILIARIA, POR FISIOTERAPIA",
         TR: "ATENCION (VISITA) DOMICILIARIA, POR TERAPIA RESPIRATORIA",
         SUCCION: "TERAPIA SUCCION",
+        FON: "ATENCION (VISITA) DOMICILIARIA, POR FONIATRIA Y FONOAUDIOLOGIA",
         VM: "ATENCION (VISITA) DOMICILIARIA, POR MEDICINA GENERAL",
         ENF: "ATENCION (VISITA) DOMICILIARIA, POR ENFERMERIA",
         PSI: "ATENCION (VISITA) DOMICILIARIA, POR PSICOLOGIA",

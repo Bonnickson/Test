@@ -9,6 +9,53 @@ import {
 import { extraerTextoPDF, extraerFechas } from "../utils/pdfUtils.js";
 
 /**
+ * Valida que solo existan archivos permitidos en la carpeta de evento
+ * @param {File[]} archivos - Array de archivos en la carpeta
+ * @param {Object} resultados - Objeto con los resultados de validación
+ * @param {string} carpeta - Nombre de la carpeta
+ */
+export function validarArchivosPermitidosEvento(archivos, resultados, carpeta) {
+    const archivosPermitidos = ["1.pdf", "2.pdf", "3.pdf", "4.pdf", "5.pdf"];
+    const archivosNoPermitidos = [];
+
+    for (const archivo of archivos) {
+        const nombreLower = archivo.name.toLowerCase();
+        if (!archivosPermitidos.includes(nombreLower)) {
+            archivosNoPermitidos.push(archivo.name);
+        }
+    }
+
+    if (archivosNoPermitidos.length > 0) {
+        // Agregar "General" como servicio
+        if (!resultados[carpeta].servicios) {
+            resultados[carpeta].servicios = new Set();
+        }
+        resultados[carpeta].servicios.add("General");
+
+        // Inicializar arrays para el servicio General
+        resultados[carpeta].erroresPorServicio["General"] =
+            resultados[carpeta].erroresPorServicio["General"] || [];
+        resultados[carpeta].exitosPorServicio["General"] =
+            resultados[carpeta].exitosPorServicio["General"] || [];
+        resultados[carpeta].alertasPorServicio["General"] =
+            resultados[carpeta].alertasPorServicio["General"] || [];
+
+        // Agregar los archivos no permitidos como errores del servicio General
+        archivosNoPermitidos.forEach((archivo) => {
+            resultados[carpeta].erroresPorServicio["General"].push(
+                `Archivo no permitido: ${archivo}`
+            );
+        });
+
+        console.log(
+            `❌ ${carpeta} - Archivos no permitidos encontrados: ${archivosNoPermitidos.join(
+                ", "
+            )}`
+        );
+    }
+}
+
+/**
  * Valida un PDF en modo evento
  * @param {File} file - Archivo PDF a validar
  * @param {string} carpeta - Nombre de la carpeta
@@ -138,23 +185,29 @@ export async function validarPDF(
 
                 // Regla de igualar con fechas
                 if (regla.igualarConFechas) {
-                    // Para archivo 2.pdf de FOMAG: validar contra el número extraído
+                    // Para archivo 2.pdf de FOMAG (evento): el número extraído
+                    // de autorizaciones debe ser >= a la cantidad de evoluciones
                     if (
                         file.name === "2.pdf" &&
                         regla.extraerNumero &&
                         numeroExtraido !== null
                     ) {
-                        if (numeroExtraido !== fechas.length) {
+                        if (numeroExtraido < fechas.length) {
                             resultados[carpeta].errores.push(
-                                `${file.name}: Número declarado ${numeroExtraido} ≠ Fechas ${fechas.length}`
+                                `${file.name}: Autorizaciones ${numeroExtraido} < evoluciones ${fechas.length}`
                             );
                             resultados[carpeta].pdfs[file.name] = "❌";
+                        } else {
+                            // Mensaje de validación exitosa (se muestra si el usuario activa "Mostrar validaciones exitosas")
+                            resultados[carpeta].errores.push(
+                                `✓ ${file.name}: autorizaciones ${numeroExtraido} mayor o igual que evoluciones ${fechas.length}`
+                            );
                         }
                     } else {
-                        // Para archivo 5.pdf o Capital Salud: validar veces que aparece el texto
+                        // Para archivo 5.pdf o Capital Salud: validar veces que aparece el texto (debe ser igual)
                         if (vecesTexto !== fechas.length) {
                             resultados[carpeta].errores.push(
-                                `${file.name}: Registros ${vecesTexto} ≠ Fechas ${fechas.length}`
+                                `${file.name}: Registros ${vecesTexto} ≠ cant evoluciones ${fechas.length}`
                             );
                             resultados[carpeta].pdfs[file.name] = "❌";
                         }
