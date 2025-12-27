@@ -4,13 +4,22 @@
     <meta charset="UTF-8" />
     <title>Validador de PDFs</title>
     <link rel="stylesheet" href="styles.css" />
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZMHK58V1KG"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-ZMHK58V1KG');
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
 </head>
 <body>
 
 <div class="card">
     <div class="header-row">
-        <h1>Validador de Carpetas PDF</h1>
+        <h1>Validador</h1>
         <button id="btnAyuda" class="btn-ayuda" onclick="document.getElementById('helpModal').style.display='block'">❓ Ayuda</button>
     </div>
 
