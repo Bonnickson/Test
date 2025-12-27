@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Validador de PDFs</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+</head>
+<body>
+
+<div class="card">
+    <div class="header-row">
+        <h1>Validador de Carpetas PDF</h1>
+        <button id="btnAyuda" class="btn-ayuda" onclick="document.getElementById('helpModal').style.display='block'">❓ Ayuda</button>
+    </div>
+
+    <div class="config-section">
+        <div class="select-wrapper">
+            <label for="tipoValidacion">Tipo de validación</label>
+            <select id="tipoValidacion">
+                <option value="evento">📋 Por evento</option>
+                <option value="paquete" selected>📦 Por paquete</option>
+            </select>
+        </div>
+
+        <div id="paqueteOptions" class="paquete-options">
+            <div class="select-wrapper">
+                <label for="tipoPaquete">Tipo de paquete</label>
+                <select id="tipoPaquete">
+                    <option value="cronico">🏥 Crónico</option>
+                    <option value="cronico-terapias" selected>💊 Crónico con terapias</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="select-wrapper">
+            <label for="convenio">Convenio</label>
+            <select id="convenio">
+                <option value="capital-salud">🏢 Capital Salud</option>
+                <option value="fomag" selected>🏛️ FOMAG</option>
+            </select>
+        </div>
+    </div>
+
+    <label class="file">
+        📁 Seleccionar carpeta
+        <input type="file" id="inputFolder" webkitdirectory directory multiple />
+    </label>
+    <button id="btnAbrirFS" class="btn-limpiar">⚡ Abrir carpeta (rápido)</button>
+
+    <button id="btnDescargar" class="btn-descargar oculto">⬇️ Descargar XLSX</button>
+
+    <button id="btnLimpiar" class="btn-limpiar-todo oculto">🗑️ Limpiar todo</button>
+
+    <!-- Modal de progreso de descarga -->
+    <div id="modalProgresoBajada" class="modal-progreso-bajada oculto">
+        <div class="modal-progreso-bajada-contenido">
+            <h3>📥 Preparando archivo XLSX...</h3>
+            <div class="progreso-barra-bajada">
+                <div id="progresoFillBajada" class="progreso-fill-bajada"></div>
+            </div>
+            <div class="progreso-info-bajada">
+                <span id="progresoPorcentajeBajada">0%</span>
+                <span id="progresoTextoBajada">Iniciando...</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="estado" class="estado oculto"></div>
+
+    <!-- Barra de progreso -->
+    <div id="barraProgreso" class="barra-progreso oculto">
+        <div class="progreso-header">
+            <div class="progreso-info">
+                <span id="progresoTexto">Procesando...</span>
+                <span id="progresoDetalle" class="progreso-detalle"></span>
+            </div>
+            <span id="progresoPorcentaje" class="progreso-porcentaje">0%</span>
+        </div>
+        <div class="progreso-barra">
+            <div id="progresoFill" class="progreso-fill"></div>
+        </div>
+    </div>
+
+    <!-- Resumen de validación -->
+    <div id="resumen" class="resumen oculto">
+        <h3>📊 Resumen de Validación</h3>
+        <div class="resumen-container">
+            <!-- Columna izquierda: Estadísticas generales -->
+            <div class="resumen-general">
+                <div class="resumen-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Total carpetas:</span>
+                        <span class="stat-value" id="statTotal">0</span>
+                    </div>
+                    <div class="stat-item success">
+                        <span class="stat-label">✔ Sin errores:</span>
+                        <span class="stat-value" id="statExito">0</span>
+                    </div>
+                    <div class="stat-item warning">
+                        <span class="stat-label">⚠ Con alertas:</span>
+                        <span class="stat-value" id="statAlertas">0</span>
+                    </div>
+                    <div class="stat-item error">
+                        <span class="stat-label">✖ Con errores:</span>
+                        <span class="stat-value" id="statErrores">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Columna derecha: Errores por tipo -->
+            <div id="resumenErrores" class="resumen-errores oculto">
+                <h4>📄 Errores por tipo</h4>
+                <div id="listaErrores" class="lista-errores"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de búsqueda y filtros -->
+    <div id="filtros" class="filtros oculto">
+        <div class="filtro-item">
+            <label for="buscarDocumento">🔍 Buscar por documento:</label>
+            <input type="text" id="buscarDocumento" placeholder="Ingrese número de documento..." />
+        </div>
+        <div class="filtro-item">
+            <label for="filtroEstado">📊 Filtrar por estado:</label>
+            <select id="filtroEstado">
+                <option value="">📋 Todos los estados</option>
+                <option value="sin-errores">✅ Sin errores</option>
+                <option value="con-alertas">⚠️ Con alertas</option>
+                <option value="con-errores">❌ Con errores</option>
+            </select>
+        </div>
+        <div class="filtro-item">
+            <label for="filtroServicio">🏥 Filtrar por servicio:</label>
+            <select id="filtroServicio">
+                <option value="">🎯 Todos los servicios</option>
+                <option value="VM">🩺 VM - Visita Médica</option>
+                <option value="ENF">💉 ENF - Enfermería</option>
+                <option value="TF">🏃 TF - Terapia Física</option>
+                <option value="TR">🫁 TR - Terapia Respiratoria</option>
+                <option value="SUCCION">🌬️ SUCCION - Terapia Succión</option>
+                <option value="PSI">🧠 PSI - Psicología</option>
+                <option value="TS">👥 TS - Trabajo Social</option>
+                <option value="FON">🗣️ FON - Fonoaudiología</option>
+            </select>
+        </div>
+        <div class="filtro-item checkbox-item destacado">
+            <label>
+                <input type="checkbox" id="mostrarExitos" />
+                ✓ Mostrar validaciones exitosas
+            </label>
+        </div>
+        <button id="limpiarFiltros" class="btn-limpiar">🔄 Limpiar filtros</button>
+    </div>
+
+    <div class="table-wrapper">
+        <table id="tabla">
+            <thead id="tablaHeader">
+                <tr>
+                    <th>Tipo</th>
+                    <th>Carpeta</th>
+                    <th>2.pdf</th>
+                    <th>3.pdf</th>
+                    <th>4.pdf</th>
+                    <th>5.pdf</th>
+                    <th>Cant.</th>
+                    <th>Evoluciones (cantidad y detalle)</th>
+                    <th>Errores</th>
+                </tr>
+            </thead>
+            <tbody id="tablaBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal para mostrar PDFs -->
+<div id="pdfModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="pdfModalTitle">PDF</h2>
+            <span class="modal-close" onclick="cerrarModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <iframe id="pdfFrame" src="" frameborder="0"></iframe>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de ayuda -->
+<div id="helpModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Guía rápida</h2>
+            <span class="modal-close" onclick="document.getElementById('helpModal').style.display='none'">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="help-content">
+                <div class="help-filters">
+                    <button class="filter-btn active" data-filter="todos">Todos</button>
+                    <button class="filter-btn" data-filter="capital">Capital</button>
+                    <button class="filter-btn" data-filter="fomag-evento">FOMAG Evento</button>
+                    <button class="filter-btn" data-filter="fomag-paquete">FOMAG Paquete</button>
+                </div>
+                <div class="help-grid">
+                    <div class="help-card" data-group="general">
+                        <h3>📁 Estructura de carpetas</h3>
+                        <ul class="help-list">
+                            <li>Una carpeta por documento.</li>
+                            <li class="scope-evento">Por <strong>Evento</strong>: el nombre de carpeta <strong>debe incluir el tipo</strong> (ej: <span class="example">123456789 ENF</span>).</li>
+                            <li class="scope-paquete">Por <strong>Paquete</strong>: el nombre de carpeta debe ser <strong>solo el número</strong> (ej: <span class="example">123456789</span>).</li>
+                        </ul>
+                    </div>
+                    <div class="help-card card-evento" data-group="evento">
+                        <h3>🧾 Evento</h3>
+                        <div class="example">2.pdf, 3.pdf, 4.pdf, 5.pdf</div>
+                        <ul class="help-list">
+                            <li>El <strong>5.pdf</strong> contiene evoluciones del servicio (ej: "Registro De Enfermería - Actividades").</li>
+                            <li>El <strong>2.pdf</strong> puede declarar autorizaciones (según convenio).</li>
+                        </ul>
+                    </div>
+                    <div class="help-card card-capital" data-group="capital">
+                        <h3>📑 Archivos — Capital Salud (Evento)</h3>
+                        <div class="chips">
+                            <span class="chip">2.pdf</span>
+                            <span class="chip">3.pdf</span>
+                            <span class="chip">4.pdf</span>
+                            <span class="chip">5.pdf</span>
+                        </div>
+                        <ul class="help-list">
+                            <li>La carpeta <strong>debe incluir</strong> el tipo: VM, ENF, TF, TR, SUCCION, PSI, TS, FON.</li>
+                            <li><strong>2.pdf</strong>, <strong>3.pdf</strong> y <strong>5.pdf</strong> deben contener el número de documento.</li>
+                            <li>No se compara <strong>autorizaciones</strong> vs <strong>evoluciones</strong> en Capital.</li>
+                            <li><strong>5.pdf</strong> debe incluir el texto del servicio (ej: "Registro De Enfermería").</li>
+                            <li><strong>4.pdf</strong> firmas: se espera <strong>1 página</strong>; si contiene "identificación" se muestra <strong>alerta</strong>.</li>
+                        </ul>
+                    </div>
+                    <div class="help-card card-fomag-evento" data-group="fomag-evento">
+                        <h3>📑 Archivos — FOMAG (Evento)</h3>
+                        <div class="chips">
+                            <span class="chip">2.pdf</span>
+                            <span class="chip">4.pdf</span>
+                            <span class="chip">5.pdf</span>
+                        </div>
+                        <ul class="help-list">
+                            <li>En <strong>2.pdf</strong> las <strong>autorizaciones</strong> deben ser <strong>mayor o igual</strong> a las <strong>evoluciones</strong> del 5.pdf.</li>
+                            <li><strong>2.pdf</strong> y <strong>5.pdf</strong> deben contener el número de documento.</li>
+                        </ul>
+                    </div>
+                    <div class="help-card" data-group="fomag-paquete">
+                        <h3>📦 Paquete</h3>
+                            <div class="chips">
+                                <span class="chip">2 vm.pdf</span>
+                                <span class="chip">4 vm.pdf</span>
+                                <span class="chip">5 vm.pdf</span>
+                                <span class="chip">2 enf.pdf</span>
+                                <span class="chip">4 enf.pdf</span>
+                                <span class="chip">5 enf.pdf</span>
+                                <span class="chip">… (TF/TR/SUCCION/TO/TS/PSI/FON)</span>
+                            </div>
+                        <ul class="help-list">
+                                <li>En <strong>FOMAG</strong> puede existir <span class="chip">2 paq.pdf</span>, que declara autorizaciones de <strong>varios servicios</strong>.</li>
+                                <li>También puede haber <strong>2 [servicio].pdf</strong> individual. <strong>Prioridad:</strong> si existe individual, se usa ese; si no, se toma lo de <span class="chip">2 paq.pdf</span>.</li>
+                                <li>Las <strong>autorizaciones</strong> del 2.pdf deben <strong>igualar</strong> las <strong>evoluciones</strong> del 5.pdf.</li>
+                                <li><strong>2 [servicio].pdf</strong> y <strong>5 [servicio].pdf</strong> deben contener el número de documento.</li>
+                        </ul>
+                    </div>
+                    <div class="help-card">
+                            <h3>🏥 Servicios y textos</h3>
+                            <div class="help-badges">
+                                <span class="badge">VM — Valoración Médica</span>
+                                <span class="badge">ENF — Enfermería</span>
+                                <span class="badge">TF — Terapia Física</span>
+                                <span class="badge">TR — Terapia Respiratoria</span>
+                                <span class="badge">SUCCION — Terapia Succión</span>
+                                <span class="badge">TO — Terapia Ocupacional</span>
+                                <span class="badge">TS — Trabajo Social</span>
+                                <span class="badge">PSI — Psicología</span>
+                                <span class="badge">FON — Fonoaudiología</span>
+                            </div>
+                            <ul class="help-list">
+                                <li><strong>5.pdf</strong>: "Registro De …" (ej: "Registro De Fonoaudiología").</li>
+                                <li><strong>2.pdf (FOMAG)</strong>: "ATENCION (VISITA) DOMICILIARIA, POR …" (ej: "… FONIATRIA Y FONOAUDIOLOGIA").</li>
+                            </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Filtros de ayuda
+(function(){
+  const btns = document.querySelectorAll('#helpModal .filter-btn');
+  const cards = document.querySelectorAll('#helpModal .help-card');
+  function aplicar(filtro){
+    btns.forEach(b=>b.classList.toggle('active', b.dataset.filter===filtro));
+    cards.forEach(c=>{
+      const group = c.getAttribute('data-group')||'general';
+            const visible = filtro==='todos' ||
+                (filtro==='capital' && (group==='capital' || group==='general')) ||
+                (filtro==='fomag-evento' && (group==='fomag-evento' || group==='general')) ||
+                (filtro==='fomag-paquete' && (group==='fomag-paquete' || group==='general'));
+      c.style.display = visible ? '' : 'none';
+    });
+
+        // Mostrar/ocultar detalles específicos dentro de tarjetas generales
+        const showPaquete = filtro==='fomag-paquete' || filtro==='todos';
+        const showEvento = filtro!=='fomag-paquete';
+        document.querySelectorAll('#helpModal .scope-paquete').forEach(el=>{
+            el.style.display = showPaquete ? '' : 'none';
+        });
+        document.querySelectorAll('#helpModal .scope-evento').forEach(el=>{
+            el.style.display = showEvento ? '' : 'none';
+        });
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>aplicar(b.dataset.filter)));
+    // Aplicar filtro inicial
+    aplicar('todos');
+})();
+</script>
+
+<script type="module" src="src/app.js"></script>
+</body>
+</html>
