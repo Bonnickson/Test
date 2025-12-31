@@ -47,11 +47,11 @@ export function validarArchivosPermitidosEvento(archivos, resultados, carpeta) {
             );
         });
 
-        console.log(
-            `❌ ${carpeta} - Archivos no permitidos encontrados: ${archivosNoPermitidos.join(
-                ", "
-            )}`
-        );
+        // console.log(
+        //     `❌ ${carpeta} - Archivos no permitidos encontrados: ${archivosNoPermitidos.join(
+        //         ", "
+        //     )}`
+        // );
     }
 }
 
@@ -70,11 +70,11 @@ export async function validarPDF(
     resultados,
     convenio = "capital-salud"
 ) {
-    console.log(`\n🔍 Validando evento`);
-    console.log(`   Carpeta: ${carpeta}`);
-    console.log(`   Archivo: ${file.name}`);
-    console.log(`   Ruta: ${file.webkitRelativePath || file.name}`);
-    console.log(`   Convenio: ${convenio}`);
+    // console.log(`\n🔍 Validando evento`);
+    // console.log(`   Carpeta: ${carpeta}`);
+    // console.log(`   Archivo: ${file.name}`);
+    // console.log(`   Ruta: ${file.webkitRelativePath || file.name}`);
+    // console.log(`   Convenio: ${convenio}`);
 
     try {
         const pdf = await pdfjsLib.getDocument({
@@ -103,17 +103,17 @@ export async function validarPDF(
                     `${file.name}: no contiene número ${nroDocumento}`
                 );
                 resultados[carpeta].pdfs[file.name] = "❌";
-                console.log(
-                    `❌ ${carpeta} - ${file.name}: Documento ${nroDocumento} NO encontrado`
-                );
+                // console.log(
+                //     `❌ ${carpeta} - ${file.name}: Documento ${nroDocumento} NO encontrado`
+                // );
             } else {
                 // Agregar mensaje de éxito cuando se encuentra el documento
                 resultados[carpeta].errores.push(
                     `✓ ${file.name}: contiene número ${nroDocumento}`
                 );
-                console.log(
-                    `✓ ${carpeta} - ${file.name}: Documento ${nroDocumento} encontrado`
-                );
+                // console.log(
+                //     `✓ ${carpeta} - ${file.name}: Documento ${nroDocumento} encontrado`
+                // );
             }
         }
 
@@ -149,14 +149,14 @@ export async function validarPDF(
 
                 if (!textoEncontrado) {
                     // Para debug: mostrar todo el texto del PDF
-                    console.log(`❌ ERROR en ${file.name} (${tipo}):`);
-                    console.log(
-                        `   Buscando alguno de: ${textosABuscar
-                            .map((t) => `"${t}"`)
-                            .join(" o ")}`
-                    );
-                    console.log(`   Texto completo del PDF normalizado:`);
-                    console.log(textoPlanoNorm);
+                    // console.log(`❌ ERROR en ${file.name} (${tipo}):`);
+                    // console.log(
+                    //     `   Buscando alguno de: ${textosABuscar
+                    //         .map((t) => `"${t}"`)
+                    //         .join(" o ")}`
+                    // );
+                    // console.log(`   Texto completo del PDF normalizado:`);
+                    // console.log(textoPlanoNorm);
 
                     resultados[carpeta].errores.push(
                         `${file.name}: falta alguno de: ${textosABuscar.join(
@@ -165,9 +165,9 @@ export async function validarPDF(
                     );
                     resultados[carpeta].pdfs[file.name] = "❌";
                 } else {
-                    console.log(
-                        `✓ Éxito en ${file.name} (${tipo}): encontrado "${textoEncontrado}"`
-                    );
+                    // console.log(
+                    //     `✓ Éxito en ${file.name} (${tipo}): encontrado "${textoEncontrado}"`
+                    // );
                 }
 
                 // Para FOMAG: extraer el número que aparece después del texto
@@ -215,14 +215,14 @@ export async function validarPDF(
                 }
 
                 if (DEBUG) {
-                    console.log({
-                        carpeta,
-                        file: file.name,
-                        buscar,
-                        vecesTexto,
-                        fechasFound: fechas.length,
-                        numeroExtraido,
-                    });
+                    // console.log({
+                    //     carpeta,
+                    //     file: file.name,
+                    //     buscar,
+                    //     vecesTexto,
+                    //     fechasFound: fechas.length,
+                    //     numeroExtraido,
+                    // });
                 }
             }
         }

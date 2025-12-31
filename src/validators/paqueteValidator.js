@@ -6,7 +6,11 @@ import {
     escapeRegExp,
     extraerNumeroDelTexto,
 } from "../utils/textUtils.js";
-import { extraerTextoPDF, extraerFechas } from "../utils/pdfUtils.js";
+import {
+    extraerTextoPDF,
+    extraerFechas,
+    validarOrdenFechas,
+} from "../utils/pdfUtils.js";
 
 // Variable para controlar debug solo en primer servicio
 let primerServicioDebug = null;
@@ -78,11 +82,11 @@ export function validarArchivosPermitidosPaquete(
             );
         });
 
-        console.log(
-            `❌ ${carpeta} - Archivos no permitidos encontrados: ${archivosNoPermitidos.join(
-                ", "
-            )}`
-        );
+        // console.log(
+        //     `❌ ${carpeta} - Archivos no permitidos encontrados: ${archivosNoPermitidos.join(
+        //         ", "
+        //     )}`
+        // );
     }
 }
 
@@ -503,6 +507,46 @@ async function validarPDFPaquete(
             // Guardar fechas por servicio para archivo 5
             if (numArchivo === "5" && servicio !== "PAQ") {
                 resultados[carpeta].fechasPorServicio[servicio] = fechas;
+
+                // Validar fechas duplicadas y orden
+                if (fechas.length > 0) {
+                    const { duplicadas, desordenadas } =
+                        validarOrdenFechas(fechas);
+
+                    if (duplicadas.length > 0) {
+                        resultados[carpeta].alertasPorServicio[servicio] =
+                            resultados[carpeta].alertasPorServicio[servicio] ||
+                            [];
+                        resultados[carpeta].alertasPorServicio[servicio].push(
+                            `5.pdf: Fechas duplicadas: ${duplicadas.join(", ")}`
+                        );
+                    } else {
+                        // Agregar validación exitosa cuando no hay duplicadas
+                        resultados[carpeta].exitosPorServicio[servicio] =
+                            resultados[carpeta].exitosPorServicio[servicio] ||
+                            [];
+                        resultados[carpeta].exitosPorServicio[servicio].push(
+                            `5.pdf: Sin fechas duplicadas`
+                        );
+                    }
+
+                    if (desordenadas) {
+                        resultados[carpeta].alertasPorServicio[servicio] =
+                            resultados[carpeta].alertasPorServicio[servicio] ||
+                            [];
+                        resultados[carpeta].alertasPorServicio[servicio].push(
+                            `5.pdf: Fechas no están en orden cronológico`
+                        );
+                    } else {
+                        // Agregar validación exitosa cuando están en orden
+                        resultados[carpeta].exitosPorServicio[servicio] =
+                            resultados[carpeta].exitosPorServicio[servicio] ||
+                            [];
+                        resultados[carpeta].exitosPorServicio[servicio].push(
+                            `5.pdf: Fechas en orden cronológico correcto`
+                        );
+                    }
+                }
             }
 
             // Extraer número del texto para archivo 2 (paquetes)
@@ -516,30 +560,30 @@ async function validarPDFPaquete(
                 );
 
                 // Log limpio con información relevante del 2.pdf - SIEMPRE mostrar
-                console.log(
-                    `\n📄 VALIDACIÓN ARCHIVO 2.pdf\n` +
-                        `   Carpeta: ${carpeta}\n` +
-                        `   Servicio: ${servicio}\n` +
-                        `   Archivo: ${file.name}\n` +
-                        `   Convenio: ${convenio}\n` +
-                        `   Reglas obtenidas: ${JSON.stringify(
-                            REGLAS_PAQUETE[servicio],
-                            null,
-                            2
-                        )}\n` +
-                        `   Texto buscado: "${textoBuscar || "N/A"}"\n` +
-                        `   Cant. Auto encontrada: ${
-                            numeroExtraido !== null
-                                ? numeroExtraido
-                                : "NO ENCONTRADO"
-                        }\n` +
-                        `   Documento (${nroDocumento}): ${
-                            textoPlanoNorm.includes(nroDocumento)
-                                ? "✓ Encontrado"
-                                : "✗ NO encontrado"
-                        }\n` +
-                        `\n--- TEXTO COMPLETO DEL PDF ---\n${texto}\n--- FIN TEXTO ---\n`
-                );
+                // console.log(
+                //     `\n📄 VALIDACIÓN ARCHIVO 2.pdf\n` +
+                //         `   Carpeta: ${carpeta}\n` +
+                //         `   Servicio: ${servicio}\n` +
+                //         `   Archivo: ${file.name}\n` +
+                //         `   Convenio: ${convenio}\n` +
+                //         `   Reglas obtenidas: ${JSON.stringify(
+                //             REGLAS_PAQUETE[servicio],
+                //             null,
+                //             2
+                //         )}\n` +
+                //         `   Texto buscado: "${textoBuscar || "N/A"}"\n` +
+                //         `   Cant. Auto encontrada: ${
+                //             numeroExtraido !== null
+                //                 ? numeroExtraido
+                //                 : "NO ENCONTRADO"
+                //         }\n` +
+                //         `   Documento (${nroDocumento}): ${
+                //             textoPlanoNorm.includes(nroDocumento)
+                //                 ? "✓ Encontrado"
+                //                 : "✗ NO encontrado"
+                //         }\n` +
+                //         `\n--- TEXTO COMPLETO DEL PDF ---\n${texto}\n--- FIN TEXTO ---\n`
+                // );
 
                 if (numeroExtraido !== null) {
                     resultados[carpeta].numerosPorServicio =
@@ -656,18 +700,38 @@ async function validarPDFPaquete(
                     const cantHC = fechas.length;
 
                     if (cantAuto !== cantHC) {
-                        resultados[carpeta].erroresPorServicio[servicio] =
-                            resultados[carpeta].erroresPorServicio[servicio] ||
-                            [];
-                        resultados[carpeta].erroresPorServicio[servicio].push(
-                            `5.pdf: Cant autorizaciones ${cantAuto} ≠ cant evoluciones ${cantHC}`
-                        );
-                        // Marcar el archivo con error
-                        if (resultados[carpeta].pdfsPorServicio[servicio]) {
-                            resultados[carpeta].pdfsPorServicio[servicio]["5"] =
-                                "✗";
+                        // Si autorizaciones < evoluciones: ERROR
+                        if (cantAuto < cantHC) {
+                            resultados[carpeta].erroresPorServicio[servicio] =
+                                resultados[carpeta].erroresPorServicio[
+                                    servicio
+                                ] || [];
+                            resultados[carpeta].erroresPorServicio[
+                                servicio
+                            ].push(
+                                `5.pdf: Cant autorizaciones ${cantAuto} < cant evoluciones ${cantHC}`
+                            );
+                            // Marcar el archivo con error
+                            if (resultados[carpeta].pdfsPorServicio[servicio]) {
+                                resultados[carpeta].pdfsPorServicio[servicio][
+                                    "5"
+                                ] = "✗";
+                            }
+                        }
+                        // Si autorizaciones > evoluciones: ALERTA
+                        else {
+                            resultados[carpeta].alertasPorServicio[servicio] =
+                                resultados[carpeta].alertasPorServicio[
+                                    servicio
+                                ] || [];
+                            resultados[carpeta].alertasPorServicio[
+                                servicio
+                            ].push(
+                                `5.pdf: Cant autorizaciones ${cantAuto} > cant evoluciones ${cantHC}`
+                            );
                         }
                     } else {
+                        // Cuando coinciden, agregar validación exitosa
                         resultados[carpeta].exitosPorServicio[servicio] =
                             resultados[carpeta].exitosPorServicio[servicio] ||
                             [];
@@ -722,23 +786,23 @@ async function procesarArchivoPaqueteFomag(
             : null;
 
         // Log limpio con información relevante del 2.pdf - SIEMPRE mostrar
-        console.log(
-            `\n📄 VALIDACIÓN ARCHIVO 2.pdf (PAQ)\n` +
-                `   Carpeta: ${carpeta}\n` +
-                `   Servicio: ${servicio}\n` +
-                `   Archivo: ${file.name}\n` +
-                `   Convenio: fomag\n` +
-                `   Texto buscado: "${textoABuscar}"\n` +
-                `   Cant. Auto encontrada: ${
-                    numero !== null ? numero : "NO ENCONTRADO"
-                }\n` +
-                `   Documento (${nroDocumento}): ${
-                    textoPlanoNorm.includes(nroDocumento)
-                        ? "✓ Encontrado"
-                        : "✗ NO encontrado"
-                }\n` +
-                `\n--- TEXTO COMPLETO DEL PDF ---\n${texto}\n--- FIN TEXTO ---\n`
-        );
+        // console.log(
+        //     `\n📄 VALIDACIÓN ARCHIVO 2.pdf (PAQ)\n` +
+        //         `   Carpeta: ${carpeta}\n` +
+        //         `   Servicio: ${servicio}\n` +
+        //         `   Archivo: ${file.name}\n` +
+        //         `   Convenio: fomag\n` +
+        //         `   Texto buscado: "${textoABuscar}"\n` +
+        //         `   Cant. Auto encontrada: ${
+        //             numero !== null ? numero : "NO ENCONTRADO"
+        //         }\n` +
+        //         `   Documento (${nroDocumento}): ${
+        //             textoPlanoNorm.includes(nroDocumento)
+        //                 ? "✓ Encontrado"
+        //                 : "✗ NO encontrado"
+        //         }\n` +
+        //         `\n--- TEXTO COMPLETO DEL PDF ---\n${texto}\n--- FIN TEXTO ---\n`
+        // );
 
         if (encontrado) {
             if (numero !== null) {
@@ -791,15 +855,12 @@ async function validarArchivo2Fomag(
             resultados[carpeta].numerosPorServicio || {};
         resultados[carpeta].numerosPorServicio[servicio] = numero;
 
-        // Validar contra fechas del archivo 5 correspondiente
-        const fechas5 = resultados[carpeta].fechasPorServicio[servicio] || [];
-        if (numero !== fechas5.length) {
-            resultados[carpeta].errores.push(
-                `${file.name}: Cant autorizaciones ${numero} ≠ cant evoluciones archivo 5: ${fechas5.length}`
-            );
-        }
+        // NO comparar aquí con fechas del archivo 5
+        // La comparación se hace cuando se procesa el archivo 5.pdf (después de extraer sus fechas)
     } else {
-        resultados[carpeta].errores.push(
+        resultados[carpeta].erroresPorServicio[servicio] =
+            resultados[carpeta].erroresPorServicio[servicio] || [];
+        resultados[carpeta].erroresPorServicio[servicio].push(
             `${file.name}: no se pudo extraer el número después del texto`
         );
     }
@@ -818,6 +879,7 @@ function obtenerTextoServicioFomag(servicio) {
         ENF: "ATENCION (VISITA) DOMICILIARIA, POR ENFERMERIA",
         PSI: "ATENCION (VISITA) DOMICILIARIA, POR PSICOLOGIA",
         TS: "ATENCION (VISITA) DOMICILIARIA, POR TRABAJO SOCIAL",
+        TO: "ATENCION (VISITA) DOMICILIARIA, POR TERAPIA OCUPACIONAL",
     };
     return textos[servicio] || null;
 }

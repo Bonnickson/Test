@@ -169,7 +169,7 @@ limpiarFiltrosBtn.addEventListener("click", () => {
     buscarDocumentoInput.value = "";
     filtroServicioSelect.value = "";
     filtroEstadoSelect.value = "";
-    mostrarExitosCheckbox.checked = true;
+    mostrarExitosCheckbox.checked = false;
     erroresSeleccionados.clear();
     listaErroresDiv
         .querySelectorAll(".error-tipo-item.selected")
@@ -648,7 +648,7 @@ function determinarEstadoFilaEvento(r) {
 
 // Event listener principal para procesar carpetas
 input.addEventListener("change", async () => {
-    console.log("Evento change disparado en input");
+    // console.log("Evento change disparado en input");
     tablaBody.innerHTML = "";
     estado.classList.remove("oculto");
     barraProgresoDiv.classList.remove("oculto");
@@ -662,33 +662,33 @@ input.addEventListener("change", async () => {
     const tipoPaquete = tipoPaqueteSelect.value;
     const convenio = convenioSelect.value;
 
-    console.log("Configuración:", { tipoValidacion, tipoPaquete, convenio });
-    console.log("Archivos seleccionados:", input.files.length);
+    // console.log("Configuración:", { tipoValidacion, tipoPaquete, convenio });
+    // console.log("Archivos seleccionados:", input.files.length);
 
     // Actualizar headers de la tabla
     actualizarHeadersTabla(tabla, tablaHeader, tipoValidacion, tipoPaquete);
 
     // Agrupar archivos por carpeta
-    console.log("=== INICIO AGRUPACIÓN DE ARCHIVOS ===");
+    // console.log("=== INICIO AGRUPACIÓN DE ARCHIVOS ===");
     for (const f of input.files) {
-        console.log(`Archivo: ${f.name}, Path: ${f.webkitRelativePath}`);
+        // console.log(`Archivo: ${f.name}, Path: ${f.webkitRelativePath}`);
         if (IGNORAR_ARCHIVOS.has(f.name.toLowerCase())) {
-            console.log(`  → Ignorado por IGNORAR_ARCHIVOS`);
+            // console.log(`  → Ignorado por IGNORAR_ARCHIVOS`);
             continue;
         }
         const p = f.webkitRelativePath.split("/");
-        console.log(`  → Partes: ${JSON.stringify(p)}, Length: ${p.length}`);
+        // console.log(`  → Partes: ${JSON.stringify(p)}, Length: ${p.length}`);
         if (p.length < 2) {
-            console.log(`  → Saltado: length < 2`);
+            // console.log(`  → Saltado: length < 2`);
             continue;
         }
         const carpetaKey = p[p.length - 2];
-        console.log(`  → Carpeta detectada: ${carpetaKey}`);
+        // console.log(`  → Carpeta detectada: ${carpetaKey}`);
         carpetas[carpetaKey] ??= [];
         carpetas[carpetaKey].push(f);
     }
-    console.log("Carpetas agrupadas:", Object.keys(carpetas));
-    console.log("=== FIN AGRUPACIÓN ===");
+    // console.log("Carpetas agrupadas:", Object.keys(carpetas));
+    // console.log("=== FIN AGRUPACIÓN ===");
 
     // Inicializar progreso
     const totalCarpetas = Object.keys(carpetas).length;
@@ -740,7 +740,13 @@ input.addEventListener("change", async () => {
                 nroDocumento,
                 resultados,
                 estado,
-                (carp, res) => updateRow(tablaBody, carp, res),
+                (carp, res) =>
+                    updateRow(
+                        tablaBody,
+                        carp,
+                        res,
+                        mostrarExitosCheckbox.checked
+                    ),
                 convenio,
                 (nombreArchivo) => {
                     // Callback para actualizar progreso con archivo actual
@@ -869,26 +875,26 @@ async function procesarArchivosDesdeFS(fsFiles) {
 
     actualizarHeadersTabla(tabla, tablaHeader, tipoValidacion, tipoPaquete);
 
-    console.log("=== INICIO AGRUPACIÓN DE ARCHIVOS (FS) ===");
+    // console.log("=== INICIO AGRUPACIÓN DE ARCHIVOS (FS) ===");
     for (const f of fsFiles) {
-        console.log(`Archivo: ${f.name}, Path: ${f.webkitRelativePath}`);
+        // console.log(`Archivo: ${f.name}, Path: ${f.webkitRelativePath}`);
         if (IGNORAR_ARCHIVOS.has(f.name.toLowerCase())) {
-            console.log(`  → Ignorado por IGNORAR_ARCHIVOS`);
+            // console.log(`  → Ignorado por IGNORAR_ARCHIVOS`);
             continue;
         }
         const p = f.webkitRelativePath.split("/");
-        console.log(`  → Partes: ${JSON.stringify(p)}, Length: ${p.length}`);
+        // console.log(`  → Partes: ${JSON.stringify(p)}, Length: ${p.length}`);
         if (p.length < 2) {
-            console.log(`  → Saltado: length < 2`);
+            // console.log(`  → Saltado: length < 2`);
             continue;
         }
         const carpetaKey = p[p.length - 2];
-        console.log(`  → Carpeta detectada: ${carpetaKey}`);
+        // console.log(`  → Carpeta detectada: ${carpetaKey}`);
         carpetas[carpetaKey] ??= [];
         carpetas[carpetaKey].push(f);
     }
-    console.log("Carpetas agrupadas:", Object.keys(carpetas));
-    console.log("=== FIN AGRUPACIÓN (FS) ===");
+    // console.log("Carpetas agrupadas:", Object.keys(carpetas));
+    // console.log("=== FIN AGRUPACIÓN (FS) ===");
 
     const totalCarpetas = Object.keys(carpetas).length;
 
@@ -930,7 +936,13 @@ async function procesarArchivosDesdeFS(fsFiles) {
                 nroDocumento,
                 resultados,
                 estado,
-                (carp, res) => updateRow(tablaBody, carp, res),
+                (carp, res) =>
+                    updateRow(
+                        tablaBody,
+                        carp,
+                        res,
+                        mostrarExitosCheckbox.checked
+                    ),
                 convenio,
                 (nombreArchivo) => {
                     actualizarProgreso(
@@ -1070,7 +1082,12 @@ async function procesarValidacionEvento(
             );
         }
         await validarPDF(file, carpeta, nroDocumento, resultados, convenio);
-        updateRow(tablaBody, carpeta, resultados[carpeta]);
+        updateRow(
+            tablaBody,
+            carpeta,
+            resultados[carpeta],
+            mostrarExitosCheckbox.checked
+        );
     }
 }
 

@@ -172,14 +172,14 @@ export function createPlaceholderRow(
 /**
  * Actualiza una fila existente de la tabla
  */
-export function updateRow(tablaBody, carpeta, r) {
+export function updateRow(tablaBody, carpeta, r, mostrarExitos = false) {
     // Para paquetes, eliminar las filas existentes del grupo y recrearlas
     if (r.tipoValidacion === "paquete") {
         const existingRows = document.querySelectorAll(
             `tr[data-carpeta="${carpeta}"]`
         );
         existingRows.forEach((row) => row.remove());
-        return pintarFila(tablaBody, carpeta, r);
+        return pintarFila(tablaBody, carpeta, r, mostrarExitos);
     }
 
     // Para eventos, actualizar la fila existente
@@ -218,7 +218,7 @@ export function updateRow(tablaBody, carpeta, r) {
 /**
  * Pinta una nueva fila en la tabla
  */
-export function pintarFila(tablaBody, carpeta, r) {
+export function pintarFila(tablaBody, carpeta, r, mostrarExitos = false) {
     const fechasUnicas = [...new Set(r.fechas)];
     const fechasFormateadas = fechasUnicas.map(formatearFecha);
     const scrollClass = fechasFormateadas.length > 4 ? "fechas-scroll" : "";
@@ -231,7 +231,14 @@ export function pintarFila(tablaBody, carpeta, r) {
 
     if (r.tipoValidacion === "paquete") {
         // Para paquete, crear una fila por servicio
-        renderPaqueteFilas(tablaBody, carpeta, r, tipoDisplay, erroresHTML);
+        renderPaqueteFilas(
+            tablaBody,
+            carpeta,
+            r,
+            tipoDisplay,
+            erroresHTML,
+            mostrarExitos
+        );
     } else {
         // Para eventos, si hay servicio "General", mostrar también esos errores
         const tr = document.createElement("tr");
@@ -277,7 +284,14 @@ export function pintarFila(tablaBody, carpeta, r) {
 /**
  * Renderiza filas de paquete - una fila por servicio
  */
-function renderPaqueteFilas(tablaBody, carpeta, r, tipoDisplay, erroresHTML) {
+function renderPaqueteFilas(
+    tablaBody,
+    carpeta,
+    r,
+    tipoDisplay,
+    erroresHTML,
+    mostrarExitos = false
+) {
     // Obtener clase de grupo para esta carpeta
     const grupoClase = obtenerGrupoClase(carpeta);
 
@@ -415,7 +429,10 @@ function renderPaqueteFilas(tablaBody, carpeta, r, tipoDisplay, erroresHTML) {
         });
         const exitosHTML = exitosOrdenados
             .map(
-                (e) => `<div class="exito-item validacion-exitosa">✓ ${e}</div>`
+                (e) =>
+                    `<div class="exito-item validacion-exitosa" style="display: ${
+                        mostrarExitos ? "" : "none"
+                    }">✓ ${e}</div>`
             )
             .join("");
         const alertasHTML = alertasServicioRender
@@ -423,10 +440,21 @@ function renderPaqueteFilas(tablaBody, carpeta, r, tipoDisplay, erroresHTML) {
             .join("");
         const erroresHTML = renderErrorItems(erroresServicioRender);
 
+        // Si solo hay éxitos (sin errores ni alertas), agregar badge verde
+        const soloExitos = exitosHTML && !alertasHTML && !erroresHTML;
+        const badgeExito = soloExitos
+            ? `<div class="badge-exito">✔ Todo correcto</div>`
+            : "";
+
         const erroresServicioHTML =
-            exitosHTML || alertasHTML || erroresHTML
-                ? exitosHTML + alertasHTML + erroresHTML
+            exitosHTML || alertasHTML || erroresHTML || badgeExito
+                ? badgeExito + exitosHTML + alertasHTML + erroresHTML
                 : "—";
+
+        // Agregar clase especial si solo tiene éxitos (sin errores ni alertas)
+        if (soloExitos) {
+            tr.classList.add("solo-exitos");
+        }
 
         // Todas las filas tienen 8 celdas con TIPO y CARPETA visibles
         tr.innerHTML = `

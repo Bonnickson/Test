@@ -29,6 +29,32 @@ export function extraerFechas(texto) {
 }
 
 /**
+ * Valida que las fechas no estén duplicadas y estén en orden cronológico
+ * @returns {Object} { duplicadas: string[], desordenadas: boolean, fechasOrdenadas: string[] }
+ */
+export function validarOrdenFechas(fechas) {
+    const duplicadas = [];
+    const fechasVistas = new Set();
+
+    // Detectar duplicadas
+    for (const fecha of fechas) {
+        if (fechasVistas.has(fecha)) {
+            if (!duplicadas.includes(fecha)) {
+                duplicadas.push(fecha);
+            }
+        }
+        fechasVistas.add(fecha);
+    }
+
+    // Verificar orden cronológico
+    const fechasOrdenadas = [...fechas].sort();
+    const desordenadas =
+        JSON.stringify(fechas) !== JSON.stringify(fechasOrdenadas);
+
+    return { duplicadas, desordenadas, fechasOrdenadas };
+}
+
+/**
  * Lee un archivo y lo convierte en ArrayBuffer
  */
 export async function leerArchivoComoBuffer(file) {
