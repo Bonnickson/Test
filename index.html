@@ -213,6 +213,11 @@
             <a href="#wiki-capital" class="wiki-nav-item" onclick="showWikiSection('capital')">📑 Capital Salud</a>
             <a href="#wiki-fomag-evento" class="wiki-nav-item" onclick="showWikiSection('fomag-evento')">📋 FOMAG Evento</a>
             <a href="#wiki-fomag-paquete" class="wiki-nav-item" onclick="showWikiSection('fomag-paquete')">📦 FOMAG Paquete</a>
+            <div class="wiki-nav-section">Validación por archivo</div>
+            <a href="#wiki-archivo2" class="wiki-nav-item" onclick="showWikiSection('archivo2')">📄 Archivo 2.pdf</a>
+            <a href="#wiki-archivo3" class="wiki-nav-item" onclick="showWikiSection('archivo3')">📄 Archivo 3.pdf</a>
+            <a href="#wiki-archivo4" class="wiki-nav-item" onclick="showWikiSection('archivo4')">📄 Archivo 4.pdf</a>
+            <a href="#wiki-archivo5" class="wiki-nav-item" onclick="showWikiSection('archivo5')">📄 Archivo 5.pdf</a>
             <div class="wiki-nav-section">Referencia</div>
             <a href="#wiki-errores" class="wiki-nav-item" onclick="showWikiSection('errores')">⚠️ Tipos de errores</a>
         </nav>
@@ -291,7 +296,8 @@
                     </thead>
                     <tbody>
                         <tr><td><code>VM</code></td><td>Valoración Médica</td></tr>
-                        <tr><td><code>ENF</code></td><td>Enfermería</td></tr>
+                        <tr><td><code>ENF</code></td><td>Enfermería (Visita Domiciliaria)</td></tr>
+                        <tr><td><code>ENF12</code></td><td>Enfermería (Consulta Domiciliaria)</td></tr>
                         <tr><td><code>TF</code></td><td>Terapia Física</td></tr>
                         <tr><td><code>TR</code></td><td>Terapia Respiratoria</td></tr>
                         <tr><td><code>SUCCION</code></td><td>Terapia Succión</td></tr>
@@ -331,10 +337,23 @@
 
             <h2>Requisitos</h2>
             <ul class="wiki-list">
-                <li>La carpeta <strong>debe incluir</strong> el tipo de servicio (VM, ENF, TF, TR, SUCCION, PSI, TS, FON)</li>
+                <li>La carpeta <strong>debe incluir</strong> el tipo de servicio (VM, ENF, ENF12, TF, TR, SUCCION, PSI, TS, FON, TO)</li>
                 <li><strong>2.pdf</strong>, <strong>3.pdf</strong> y <strong>5.pdf</strong> deben contener el número de documento</li>
                 <li><strong>5.pdf</strong> debe incluir el texto del servicio (ej: "Registro De Enfermería")</li>
             </ul>
+
+            <h2>Resumen de validación por archivo</h2>
+            <div class="wiki-table">
+                <table>
+                    <thead><tr><th>Archivo</th><th>Valida Nº Doc</th><th>Valida Texto</th><th>Extrae Cant</th><th>Compara</th></tr></thead>
+                    <tbody>
+                        <tr><td>2.pdf</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+                        <tr><td>3.pdf</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+                        <tr><td>4.pdf</td><td>❌</td><td>❌</td><td>Páginas</td><td>❌</td></tr>
+                        <tr><td>5.pdf</td><td>✅</td><td>✅</td><td>Fechas</td><td>❌</td></tr>
+                    </tbody>
+                </table>
+            </div>
 
             <h2>Validaciones específicas</h2>
             <div class="wiki-note warning">
@@ -349,23 +368,54 @@
         <article id="wiki-fomag-evento" class="wiki-article oculto">
             <h1>📋 FOMAG (Evento)</h1>
             
-            <h2>Archivos requeridos</h2>
+            <h2>Archivos requeridos (por servicio)</h2>
             <div class="wiki-chips">
-                <span class="wiki-chip">2.pdf</span>
-                <span class="wiki-chip">4.pdf</span>
-                <span class="wiki-chip">5.pdf</span>
+                <span class="wiki-chip">2 [srv].pdf</span>
+                <span class="wiki-chip">4 [srv].pdf</span>
+                <span class="wiki-chip">5 [srv].pdf</span>
+            </div>
+            <p><em>O usar <code>2 paq.pdf</code> para autorizaciones combinadas.</em></p>
+
+            <h2>Servicios soportados</h2>
+            <div class="wiki-chips">
+                <span class="wiki-chip">VM</span>
+                <span class="wiki-chip">ENF</span>
+                <span class="wiki-chip">ENF12</span>
+                <span class="wiki-chip">TF</span>
+                <span class="wiki-chip">TR</span>
+                <span class="wiki-chip">SUCCION</span>
+                <span class="wiki-chip">TO</span>
+                <span class="wiki-chip">TS</span>
+                <span class="wiki-chip">PSI</span>
+                <span class="wiki-chip">FON</span>
             </div>
 
-            <h2>Requisitos</h2>
-            <ul class="wiki-list">
-                <li><strong>2.pdf</strong> y <strong>5.pdf</strong> deben contener el número de documento</li>
-                <li>El <strong>5.pdf</strong> contiene evoluciones del servicio</li>
-                <li>El <strong>2.pdf</strong> declara autorizaciones</li>
-            </ul>
+            <h2>Resumen de validación por archivo</h2>
+            <div class="wiki-table">
+                <table>
+                    <thead><tr><th>Archivo</th><th>Valida Nº Doc</th><th>Valida Texto</th><th>Extrae Cant</th><th>Compara</th></tr></thead>
+                    <tbody>
+                        <tr><td>2 [srv].pdf</td><td>✅</td><td>✅</td><td>✅ Autorizaciones</td><td>✅ vs 5.pdf</td></tr>
+                        <tr><td>4 [srv].pdf</td><td>❌</td><td>❌</td><td>Páginas</td><td>❌</td></tr>
+                        <tr><td>5 [srv].pdf</td><td>✅</td><td>✅</td><td>✅ Evoluciones</td><td>✅ vs 2.pdf</td></tr>
+                    </tbody>
+                </table>
+            </div>
 
-            <h2>Validación de autorizaciones</h2>
+            <h2>Lógica de comparación</h2>
+            <div class="wiki-note success">
+                <strong>✅ Válido:</strong> Autorizaciones ≥ Evoluciones
+            </div>
             <div class="wiki-note warning">
-                <strong>Importante:</strong> En <strong>2.pdf</strong> las <strong>autorizaciones</strong> deben ser <strong>mayor o igual</strong> a las <strong>evoluciones</strong> del 5.pdf.
+                <strong>⚠️ Alerta:</strong> Autorizaciones &gt; Evoluciones (sobran autorizaciones)
+            </div>
+            <div class="wiki-note info" style="background: #ffebee; border-color: #c62828; color: #b71c1c;">
+                <strong>❌ Error:</strong> Autorizaciones &lt; Evoluciones (faltan autorizaciones)
+            </div>
+
+            <h2>Uso de 2 paq.pdf</h2>
+            <div class="wiki-note info">
+                <strong>Prioridad:</strong> Si existe "2 [servicio].pdf", se usa ese archivo. Si no existe, se busca en "2 paq.pdf".
             </div>
         </article>
 
@@ -381,31 +431,305 @@
                 <span class="wiki-chip">2 enf.pdf</span>
                 <span class="wiki-chip">4 enf.pdf</span>
                 <span class="wiki-chip">5 enf.pdf</span>
-                <span class="wiki-chip">… (TF/TR/SUCCION/TO/TS/PSI/FON)</span>
+                <span class="wiki-chip">+ TF/TR/SUCCION/TO/TS/PSI/FON/ENF12</span>
             </div>
 
             <h2>Archivo global de paquete</h2>
-            <p>Puede existir <code>2 paq.pdf</code> que declara autorizaciones de varios servicios.</p>
+            <p>Puede existir <code>2 paq.pdf</code> que declara autorizaciones de varios servicios en un solo archivo.</p>
+            
+            <h2>Resumen de validación por archivo</h2>
+            <div class="wiki-table">
+                <table>
+                    <thead><tr><th>Archivo</th><th>Valida Nº Doc</th><th>Valida Texto</th><th>Extrae Cant</th><th>Compara</th></tr></thead>
+                    <tbody>
+                        <tr><td>2 [srv].pdf / 2 paq.pdf</td><td>✅</td><td>✅</td><td>✅ Autorizaciones</td><td>✅ vs 5.pdf</td></tr>
+                        <tr><td>4 [srv].pdf</td><td>❌</td><td>❌</td><td>Páginas</td><td>❌</td></tr>
+                        <tr><td>5 [srv].pdf</td><td>✅</td><td>✅</td><td>✅ Evoluciones</td><td>✅ vs 2.pdf</td></tr>
+                    </tbody>
+                </table>
+            </div>
             
             <h2>Prioridad de archivos</h2>
             <div class="wiki-note info">
-                Si existe <code>2 [servicio].pdf</code> individual, se usa ese. Si no, se toma lo de <code>2 paq.pdf</code>.
+                Si existe <code>2 [servicio].pdf</code> individual, se usa ese. Si no, se busca en <code>2 paq.pdf</code>.
             </div>
 
-            <h2>Requisitos de servicios</h2>
+            <h2>Requisitos de servicios obligatorios</h2>
             <ul class="wiki-list">
-                <li>Debe incluir <strong>VM</strong> (Valoración Médica)</li>
-                <li>Debe incluir <strong>ENF</strong> (Enfermería)</li>
-                <li>Debe incluir al menos un servicio de terapia (TF, TR, SUCCION, TO o FON)</li>
+                <li>✅ Debe incluir <strong>VM</strong> (Valoración Médica)</li>
+                <li>✅ Debe incluir <strong>ENF</strong> (Enfermería)</li>
+                <li>✅ Debe incluir al menos un servicio de terapia (TF, TR, SUCCION, TO o FON)</li>
             </ul>
 
-            <h2>Validación de autorizaciones</h2>
+            <h2>Lógica de comparación</h2>
+            <div class="wiki-note success">
+                <strong>✅ Válido:</strong> Autorizaciones ≥ Evoluciones
+            </div>
             <div class="wiki-note warning">
-                <strong>Importante:</strong> Las <strong>autorizaciones</strong> del 2.pdf deben <strong>igualar</strong> las <strong>evoluciones</strong> del 5.pdf.
+                <strong>⚠️ Alerta:</strong> Autorizaciones &gt; Evoluciones (sobran autorizaciones)
+            </div>
+            <div class="wiki-note info" style="background: #ffebee; border-color: #c62828; color: #b71c1c;">
+                <strong>❌ Error:</strong> Autorizaciones &lt; Evoluciones (faltan autorizaciones)
+            </div>
+        </article>
+
+        <!-- ========== ARCHIVO 2.pdf ========== -->
+        <article id="wiki-archivo2" class="wiki-article oculto">
+            <h1>📄 Validación de Archivo 2.pdf (Autorizaciones)</h1>
+            <p class="wiki-intro">El archivo 2.pdf contiene las autorizaciones del servicio. La validación varía según convenio y modo.</p>
+
+            <h2>🔷 Capital Salud - Evento</h2>
+            <div class="wiki-note info">
+                <strong>Modo:</strong> Validación solo de texto, sin conteo de autorizaciones.
+            </div>
+            <h3>Reglas aplicadas:</h3>
+            <ul class="wiki-list">
+                <li><strong>Verificar número de documento:</strong> El texto del PDF debe contener el número de documento del paciente.</li>
+                <li><strong>Sin extracción de números:</strong> No se extrae cantidad de autorizaciones.</li>
+                <li><strong>Sin comparación:</strong> No se compara con las evoluciones del 5.pdf.</li>
+            </ul>
+            <div class="wiki-example">
+                <strong>Resultado:</strong> ✓ o ✗ dependiendo si contiene el número de documento.
             </div>
 
-            <h2>Validación de documentos</h2>
-            <p><strong>2 [servicio].pdf</strong> y <strong>5 [servicio].pdf</strong> deben contener el número de documento.</p>
+            <h2>🔶 FOMAG - Evento</h2>
+            <div class="wiki-note warning">
+                <strong>Modo:</strong> Validación de texto + extracción de autorizaciones + comparación con evoluciones.
+            </div>
+            <h3>Archivos aceptados:</h3>
+            <ul class="wiki-list">
+                <li><code>2 [servicio].pdf</code> - Archivo individual por servicio (ej: "2 TF.pdf", "2 ENF.pdf")</li>
+                <li><code>2 paq.pdf</code> - Archivo global con autorizaciones de múltiples servicios</li>
+            </ul>
+            <h3>Reglas aplicadas:</h3>
+            <ol class="wiki-list">
+                <li><strong>Verificar número de documento:</strong> Debe contener el número del paciente.</li>
+                <li><strong>Buscar texto del servicio:</strong>
+                    <div class="wiki-table">
+                        <table>
+                            <thead><tr><th>Servicio</th><th>Texto buscado</th></tr></thead>
+                            <tbody>
+                                <tr><td>TF</td><td>"ATENCION (VISITA) DOMICILIARIA, POR FISIOTERAPEUTA"</td></tr>
+                                <tr><td>TR</td><td>"ATENCION (VISITA) DOMICILIARIA, POR TERAPEUTA RESPIRATORIO"</td></tr>
+                                <tr><td>SUCCION</td><td>"ATENCION (VISITA) DOMICILIARIA, POR TERAPEUTA RESPIRATORIO"</td></tr>
+                                <tr><td>FON</td><td>"ATENCION (VISITA) DOMICILIARIA, POR FONIATRIA Y FONOAUDIOLOGIA"</td></tr>
+                                <tr><td>VM</td><td>"ATENCION (VISITA) DOMICILIARIA, POR MEDICO GENERAL"</td></tr>
+                                <tr><td>ENF</td><td>"ATENCION (VISITA) DOMICILIARIA, POR ENFERMERIA"</td></tr>
+                                <tr><td>ENF12</td><td>"ATENCION (CONSULTA) DOMICILIARIA, POR ENFERMERIA"</td></tr>
+                                <tr><td>PSI</td><td>"ATENCION (VISITA) DOMICILIARIA, POR PSICOLOGO"</td></tr>
+                                <tr><td>TS</td><td>"ATENCION (VISITA) DOMICILIARIA, POR TRABAJADOR SOCIAL"</td></tr>
+                                <tr><td>TO</td><td>"ATENCION (VISITA) DOMICILIARIA, POR TERAPEUTA OCUPACIONAL"</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </li>
+                <li><strong>Extraer número después del texto:</strong> El número que sigue al texto del servicio indica la cantidad de autorizaciones.</li>
+                <li><strong>Comparar con evoluciones:</strong>
+                    <ul>
+                        <li>✅ <strong>Autorizaciones ≥ Evoluciones:</strong> Válido</li>
+                        <li>❌ <strong>Autorizaciones &lt; Evoluciones:</strong> Error - "Cant auto [X] &lt; cant evol [Y]"</li>
+                        <li>⚠️ <strong>Autorizaciones &gt; Evoluciones:</strong> Alerta - Sobran autorizaciones</li>
+                    </ul>
+                </li>
+            </ol>
+            <div class="wiki-note info">
+                <strong>Prioridad:</strong> Si existe "2 [servicio].pdf" individual, se usa ese. Si no, se toma del "2 paq.pdf".
+            </div>
+
+            <h2>🔶 FOMAG - Paquete</h2>
+            <div class="wiki-note warning">
+                <strong>Modo:</strong> Igual que Evento pero con archivos nombrados "2 [servicio].pdf".
+            </div>
+            <h3>Reglas:</h3>
+            <p>Aplican las mismas reglas que FOMAG Evento. La diferencia está en la estructura de carpetas (múltiples servicios por carpeta).</p>
+        </article>
+
+        <!-- ========== ARCHIVO 3.pdf ========== -->
+        <article id="wiki-archivo3" class="wiki-article oculto">
+            <h1>📄 Validación de Archivo 3.pdf (Epicrisis)</h1>
+            <p class="wiki-intro">El archivo 3.pdf contiene la epicrisis o resumen clínico.</p>
+
+            <h2>🔷 Capital Salud - Evento</h2>
+            <div class="wiki-note info">
+                <strong>Archivo requerido:</strong> SÍ
+            </div>
+            <h3>Reglas aplicadas:</h3>
+            <ul class="wiki-list">
+                <li><strong>Verificar número de documento:</strong> El texto del PDF debe contener el número de documento del paciente.</li>
+            </ul>
+            <div class="wiki-example">
+                <strong>Resultado:</strong> ✓ si contiene el número, ✗ si no lo contiene.
+            </div>
+
+            <h2>🔶 FOMAG - Evento</h2>
+            <div class="wiki-note success">
+                <strong>Archivo requerido:</strong> NO
+            </div>
+            <p>En FOMAG modo Evento, el archivo 3.pdf <strong>no es requerido</strong> ni validado.</p>
+
+            <h2>🔶 FOMAG - Paquete</h2>
+            <div class="wiki-note success">
+                <strong>Archivo requerido:</strong> NO
+            </div>
+            <p>En FOMAG modo Paquete, el archivo 3.pdf <strong>no es requerido</strong> ni validado.</p>
+
+            <div class="wiki-table">
+                <table>
+                    <thead><tr><th>Convenio</th><th>Modo</th><th>¿Requerido?</th><th>Validación</th></tr></thead>
+                    <tbody>
+                        <tr><td>Capital Salud</td><td>Evento</td><td>✅ SÍ</td><td>Número de documento</td></tr>
+                        <tr><td>FOMAG</td><td>Evento</td><td>❌ NO</td><td>-</td></tr>
+                        <tr><td>FOMAG</td><td>Paquete</td><td>❌ NO</td><td>-</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </article>
+
+        <!-- ========== ARCHIVO 4.pdf ========== -->
+        <article id="wiki-archivo4" class="wiki-article oculto">
+            <h1>📄 Validación de Archivo 4.pdf (Firmas)</h1>
+            <p class="wiki-intro">El archivo 4.pdf contiene los formatos de firma del paciente o acudiente.</p>
+
+            <h2>Validación común (todos los convenios)</h2>
+            <div class="wiki-note warning">
+                <strong>Regla principal:</strong> El archivo 4.pdf debe tener <strong>1 sola página</strong>.
+            </div>
+            <h3>Reglas aplicadas:</h3>
+            <ol class="wiki-list">
+                <li><strong>Conteo de páginas:</strong>
+                    <ul>
+                        <li>✅ <strong>1 página:</strong> Válido</li>
+                        <li>⚠️ <strong>Más de 1 página:</strong> Alerta - "4.pdf contiene [N] páginas, se espera 1"</li>
+                    </ul>
+                </li>
+                <li><strong>Detección de "identificación":</strong>
+                    <ul>
+                        <li>⚠️ Si el texto contiene la palabra "identificación", se genera alerta (posible documento erróneo)</li>
+                    </ul>
+                </li>
+            </ol>
+
+            <h2>🔷 Capital Salud - Evento</h2>
+            <div class="wiki-note info">
+                <strong>Archivo:</strong> <code>4.pdf</code>
+            </div>
+            <p>Aplica validación de páginas y detección de "identificación".</p>
+
+            <h2>🔶 FOMAG - Evento</h2>
+            <div class="wiki-note info">
+                <strong>Archivo:</strong> <code>4 [servicio].pdf</code> (ej: "4 TF.pdf", "4 ENF.pdf")
+            </div>
+            <p>Mismo archivo por cada servicio. Aplica las mismas validaciones.</p>
+
+            <h2>🔶 FOMAG - Paquete</h2>
+            <div class="wiki-note info">
+                <strong>Archivo:</strong> <code>4 [servicio].pdf</code>
+            </div>
+            <p>Cada servicio tiene su propio archivo de firmas.</p>
+
+            <div class="wiki-table">
+                <table>
+                    <thead><tr><th>Convenio</th><th>Modo</th><th>Archivo</th><th>Páginas esperadas</th></tr></thead>
+                    <tbody>
+                        <tr><td>Capital Salud</td><td>Evento</td><td>4.pdf</td><td>1</td></tr>
+                        <tr><td>FOMAG</td><td>Evento</td><td>4 [servicio].pdf</td><td>1</td></tr>
+                        <tr><td>FOMAG</td><td>Paquete</td><td>4 [servicio].pdf</td><td>1</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </article>
+
+        <!-- ========== ARCHIVO 5.pdf ========== -->
+        <article id="wiki-archivo5" class="wiki-article oculto">
+            <h1>📄 Validación de Archivo 5.pdf (Evoluciones)</h1>
+            <p class="wiki-intro">El archivo 5.pdf contiene las evoluciones o registros del servicio prestado.</p>
+
+            <h2>Validación común</h2>
+            <div class="wiki-note info">
+                <strong>Funciones principales:</strong>
+                <ul>
+                    <li>Verificar número de documento</li>
+                    <li>Validar texto del servicio</li>
+                    <li>Contar evoluciones (fechas)</li>
+                </ul>
+            </div>
+
+            <h2>Textos esperados por servicio</h2>
+            <div class="wiki-table">
+                <table>
+                    <thead><tr><th>Servicio</th><th>Texto(s) buscado(s)</th></tr></thead>
+                    <tbody>
+                        <tr><td>TF</td><td>"Registro De Terapia Física"</td></tr>
+                        <tr><td>TR</td><td>"Registro De Terapia Respiratoria"</td></tr>
+                        <tr><td>SUCCION</td><td>"Registro De Terapia Respiratoria" o "Terapia de succión"</td></tr>
+                        <tr><td>FON</td><td>"Registro De Fonoaudiología"</td></tr>
+                        <tr><td>VM</td><td>"Registro de Valoración Médica"</td></tr>
+                        <tr><td>ENF</td><td>"Registro De Enfermería - Actividades" o "Registro De Enfermería"</td></tr>
+                        <tr><td>ENF12</td><td>"Registro De Enfermería - Actividades" o "Registro De Enfermería"</td></tr>
+                        <tr><td>PSI</td><td>"Registro De Psicología"</td></tr>
+                        <tr><td>TS</td><td>"Registro De Trabajo Social"</td></tr>
+                        <tr><td>TO</td><td>"Registro De Terapia Ocupacional"</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2>🔷 Capital Salud - Evento</h2>
+            <div class="wiki-note info">
+                <strong>Archivo:</strong> <code>5.pdf</code>
+            </div>
+            <h3>Reglas aplicadas:</h3>
+            <ol class="wiki-list">
+                <li><strong>Verificar número de documento:</strong> Debe contener el número del paciente.</li>
+                <li><strong>Validar texto del servicio:</strong> Debe contener el texto correspondiente al tipo de servicio de la carpeta.</li>
+                <li><strong>Contar evoluciones:</strong> Extrae las fechas del documento (formato DD/MM/AAAA o DD-MM-AAAA).</li>
+            </ol>
+            <div class="wiki-note success">
+                <strong>Nota:</strong> En Capital Salud no se compara la cantidad de evoluciones con autorizaciones.
+            </div>
+
+            <h2>🔶 FOMAG - Evento</h2>
+            <div class="wiki-note warning">
+                <strong>Archivo:</strong> <code>5 [servicio].pdf</code> (ej: "5 TF.pdf", "5 ENF.pdf")
+            </div>
+            <h3>Reglas aplicadas:</h3>
+            <ol class="wiki-list">
+                <li><strong>Verificar número de documento:</strong> Debe contener el número del paciente.</li>
+                <li><strong>Validar texto del servicio:</strong> Debe contener el texto correspondiente al servicio.</li>
+                <li><strong>Contar evoluciones:</strong> Extrae las fechas del documento.</li>
+                <li><strong>Comparar con autorizaciones:</strong> 
+                    <ul>
+                        <li>✅ Evoluciones ≤ Autorizaciones → Válido</li>
+                        <li>❌ Evoluciones &gt; Autorizaciones → Error</li>
+                    </ul>
+                </li>
+            </ol>
+
+            <h2>🔶 FOMAG - Paquete</h2>
+            <div class="wiki-note warning">
+                <strong>Archivo:</strong> <code>5 [servicio].pdf</code>
+            </div>
+            <p>Aplican las mismas reglas que FOMAG Evento.</p>
+
+            <h2>Extracción de fechas</h2>
+            <div class="wiki-note info">
+                <strong>Patrón de fecha:</strong> Se buscan fechas en formato <code>DD/MM/AAAA</code> o <code>DD-MM-AAAA</code>.
+            </div>
+            <p>Las fechas encontradas se muestran en la columna "Evoluciones" y se cuentan para comparar con las autorizaciones.</p>
+            <div class="wiki-example">
+                <strong>Ejemplo de salida:</strong> "3 evoluciones: 01/03/2024, 08/03/2024, 15/03/2024"
+            </div>
+
+            <h2>Resumen comparativo</h2>
+            <div class="wiki-table">
+                <table>
+                    <thead><tr><th>Convenio</th><th>Modo</th><th>Archivo</th><th>Texto</th><th>Fechas</th><th>Comparación</th></tr></thead>
+                    <tbody>
+                        <tr><td>Capital Salud</td><td>Evento</td><td>5.pdf</td><td>✅</td><td>✅</td><td>❌ No</td></tr>
+                        <tr><td>FOMAG</td><td>Evento</td><td>5 [srv].pdf</td><td>✅</td><td>✅</td><td>✅ Sí</td></tr>
+                        <tr><td>FOMAG</td><td>Paquete</td><td>5 [srv].pdf</td><td>✅</td><td>✅</td><td>✅ Sí</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </article>
 
         <!-- Errores -->
@@ -503,6 +827,35 @@ function showWikiSection(section) {
     document.querySelector('.wiki-content').scrollTop = 0;
 }
 </script>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-content">
+        <div class="footer-section">
+            <h4>📄 Validador de PDFs</h4>
+            <p>Sistema de validación de documentos PDF para eventos y paquetes médicos.</p>
+            <p class="version">Versión 1.0.0</p>
+        </div>
+        
+        <div class="footer-section">
+            <h4>ℹ️ Información</h4>
+            <p>Soporta validación por evento y por paquete.</p>
+            <p>Compatible con Capital Salud y FOMAG.</p>
+        </div>
+        
+        <div class="footer-section">
+            <h4>👨‍💻 Desarrollador</h4>
+            <p class="developer">Hecho por <strong>Bonnickson</strong>, Ing. de software, con <span class="heart">♥</span></p>
+            <p class="date">© 2025 - Todos los derechos reservados</p>
+        </div>
+
+        <div class="footer-section">
+            <h4>📞 Contacto</h4>
+            <p>Correo: <a href="mailto:bonnickstewar@gmail.com">bonnickstewar@gmail.com</a></p>
+            <p>Teléfono / WhatsApp: <a href="tel:+573022529980">302 252 9980</a></p>
+        </div>
+    </div>
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 <script type="module" src="src/app.js"></script>

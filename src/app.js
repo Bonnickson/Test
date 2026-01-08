@@ -3,6 +3,7 @@ import { ALLOWED_TYPES, PDF_WORKER_URL } from "./config/constants.js";
 import {
     validarPDF,
     validarArchivosPermitidosEvento,
+    procesarArchivo2PaqEvento,
 } from "./validators/eventoValidator.js";
 import { validarPorPaquete } from "./validators/paqueteValidator.js";
 import {
@@ -124,17 +125,8 @@ tipoValidacionSelect.addEventListener("change", () => {
         tabla,
         tablaHeader,
         tipoValidacionSelect.value,
-        tipoPaqueteSelect.value
-    );
-});
-
-tipoPaqueteSelect.addEventListener("change", () => {
-    limpiarResultados(false); // No limpiar input
-    actualizarHeadersTabla(
-        tabla,
-        tablaHeader,
-        tipoValidacionSelect.value,
-        tipoPaqueteSelect.value
+        tipoPaqueteSelect.value,
+        convenioSelect.value
     );
 });
 
@@ -156,7 +148,8 @@ convenioSelect.addEventListener("change", () => {
         tabla,
         tablaHeader,
         tipoValidacionSelect.value,
-        tipoPaqueteSelect.value
+        tipoPaqueteSelect.value,
+        convenioSelect.value
     );
 });
 
@@ -648,7 +641,8 @@ function determinarEstadoFilaEvento(r) {
 
 // Event listener principal para procesar carpetas
 input.addEventListener("change", async () => {
-    // console.log("Evento change disparado en input");
+    console.log("Evento change disparado en input");
+    console.log("Archivos seleccionados:", input.files.length);
     tablaBody.innerHTML = "";
     estado.classList.remove("oculto");
     barraProgresoDiv.classList.remove("oculto");
@@ -662,33 +656,39 @@ input.addEventListener("change", async () => {
     const tipoPaquete = tipoPaqueteSelect.value;
     const convenio = convenioSelect.value;
 
-    // console.log("Configuración:", { tipoValidacion, tipoPaquete, convenio });
+    console.log("Configuración:", { tipoValidacion, tipoPaquete, convenio });
     // console.log("Archivos seleccionados:", input.files.length);
 
     // Actualizar headers de la tabla
-    actualizarHeadersTabla(tabla, tablaHeader, tipoValidacion, tipoPaquete);
+    actualizarHeadersTabla(
+        tabla,
+        tablaHeader,
+        tipoValidacion,
+        tipoPaquete,
+        convenio
+    );
 
     // Agrupar archivos por carpeta
-    // console.log("=== INICIO AGRUPACIÓN DE ARCHIVOS ===");
+    console.log("=== INICIO AGRUPACIÓN DE ARCHIVOS ===");
     for (const f of input.files) {
-        // console.log(`Archivo: ${f.name}, Path: ${f.webkitRelativePath}`);
+        console.log(`Archivo: ${f.name}, Path: ${f.webkitRelativePath}`);
         if (IGNORAR_ARCHIVOS.has(f.name.toLowerCase())) {
-            // console.log(`  → Ignorado por IGNORAR_ARCHIVOS`);
+            console.log(`  → Ignorado por IGNORAR_ARCHIVOS`);
             continue;
         }
         const p = f.webkitRelativePath.split("/");
-        // console.log(`  → Partes: ${JSON.stringify(p)}, Length: ${p.length}`);
+        console.log(`  → Partes: ${JSON.stringify(p)}, Length: ${p.length}`);
         if (p.length < 2) {
-            // console.log(`  → Saltado: length < 2`);
+            console.log(`  → Saltado: length < 2`);
             continue;
         }
         const carpetaKey = p[p.length - 2];
-        // console.log(`  → Carpeta detectada: ${carpetaKey}`);
+        console.log(`  → Carpeta detectada: ${carpetaKey}`);
         carpetas[carpetaKey] ??= [];
         carpetas[carpetaKey].push(f);
     }
-    // console.log("Carpetas agrupadas:", Object.keys(carpetas));
-    // console.log("=== FIN AGRUPACIÓN ===");
+    console.log("Carpetas agrupadas:", Object.keys(carpetas));
+    console.log("=== FIN AGRUPACIÓN ===");
 
     // Inicializar progreso
     const totalCarpetas = Object.keys(carpetas).length;
@@ -705,11 +705,15 @@ input.addEventListener("change", async () => {
 
     // Procesar cada carpeta
     for (const carpeta in carpetas) {
-        resultados[carpeta] = inicializarResultado(tipoValidacion, tipoPaquete);
+        resultados[carpeta] = inicializarResultado(
+            tipoValidacion,
+            tipoPaquete,
+            convenio
+        );
 
         // Detectar tipo de carpeta (para validación por evento)
         if (tipoValidacion === "evento") {
-            detectarTipoCarpeta(carpeta, resultados[carpeta]);
+            detectarTipoCarpeta(carpeta, resultados[carpeta], convenio);
         } else {
             resultados[carpeta].tipo = `Paquete: ${
                 tipoPaquete === "cronico" ? "Crónico" : "Crónico con terapias"
@@ -798,25 +802,57 @@ btnAbrirFS.addEventListener("click", async () => {
         );
         return;
     }
-    const dirHandle = await window.showDirectoryPicker();
-    const files = [];
-    // Recorrer subcarpetas de primer nivel
-    for await (const [name, handle] of dirHandle.entries()) {
-        if (handle.kind === "directory") {
-            for await (const [fname, fhandle] of handle.entries()) {
-                if (fhandle.kind === "file") {
-                    const file = await fhandle.getFile();
-                    // Simular webkitRelativePath expected by app
-                    Object.defineProperty(file, "webkitRelativePath", {
-                        value: `${name}/${file.name}`,
-                    });
-                    files.push(file);
+    try {
+        const dirHandle = await window.showDirectoryPicker();
+        const files = [];
+
+        console.log("Carpeta seleccionada, recorriendo estructura...");
+
+        // Recorrer subcarpetas de primer nivel
+        for await (const [name, handle] of dirHandle.entries()) {
+            console.log(`Entrada: ${name}, tipo: ${handle.kind}`);
+
+            if (handle.kind === "directory") {
+                console.log(`  → Carpeta detectada: ${name}`);
+
+                for await (const [fname, fhandle] of handle.entries()) {
+                    if (fhandle.kind === "file") {
+                        const file = await fhandle.getFile();
+                        console.log(`    → Archivo: ${fname}`);
+
+                        // Simular webkitRelativePath expected by app
+                        Object.defineProperty(file, "webkitRelativePath", {
+                            value: `${name}/${file.name}`,
+                            writable: false,
+                            configurable: true,
+                        });
+                        files.push(file);
+                    }
                 }
             }
         }
+
+        console.log(`Total archivos encontrados: ${files.length}`);
+
+        // Inyectar en input.files-like flujo
+        if (files.length === 0) {
+            alert(
+                "No se encontraron archivos en las subcarpetas seleccionadas."
+            );
+            return;
+        }
+
+        console.log("Iniciando procesamiento de archivos...");
+        procesarArchivosDesdeFS(files);
+    } catch (error) {
+        if (error.name !== "AbortError") {
+            console.error("Error al abrir carpeta:", error);
+            alert(
+                `Error: ${error.message}\n\nVerifica la consola del navegador para más detalles.`
+            );
+        }
+        // AbortError es normal cuando el usuario cancela
     }
-    // Inyectar en input.files-like flujo
-    procesarArchivosDesdeFS(files);
 });
 
 // Carga dinámica de la librería XLSX con fallback
@@ -860,129 +896,185 @@ btnDescargar.addEventListener("click", async () => {
 });
 
 async function procesarArchivosDesdeFS(fsFiles) {
-    tablaBody.innerHTML = "";
-    estado.classList.remove("oculto");
-    barraProgresoDiv.classList.remove("oculto");
-    btnLimpiarTodo.classList.remove("oculto");
-    resumenDiv.classList.add("oculto");
-    filtrosDiv.classList.add("oculto");
+    try {
+        console.log(
+            `Procesando ${fsFiles.length} archivos desde File System API...`
+        );
 
-    const carpetas = {};
-    const resultados = {};
-    const tipoValidacion = tipoValidacionSelect.value;
-    const tipoPaquete = tipoPaqueteSelect.value;
-    const convenio = convenioSelect.value;
-
-    actualizarHeadersTabla(tabla, tablaHeader, tipoValidacion, tipoPaquete);
-
-    // console.log("=== INICIO AGRUPACIÓN DE ARCHIVOS (FS) ===");
-    for (const f of fsFiles) {
-        // console.log(`Archivo: ${f.name}, Path: ${f.webkitRelativePath}`);
-        if (IGNORAR_ARCHIVOS.has(f.name.toLowerCase())) {
-            // console.log(`  → Ignorado por IGNORAR_ARCHIVOS`);
-            continue;
-        }
-        const p = f.webkitRelativePath.split("/");
-        // console.log(`  → Partes: ${JSON.stringify(p)}, Length: ${p.length}`);
-        if (p.length < 2) {
-            // console.log(`  → Saltado: length < 2`);
-            continue;
-        }
-        const carpetaKey = p[p.length - 2];
-        // console.log(`  → Carpeta detectada: ${carpetaKey}`);
-        carpetas[carpetaKey] ??= [];
-        carpetas[carpetaKey].push(f);
-    }
-    // console.log("Carpetas agrupadas:", Object.keys(carpetas));
-    // console.log("=== FIN AGRUPACIÓN (FS) ===");
-
-    const totalCarpetas = Object.keys(carpetas).length;
-
-    if (totalCarpetas === 0) {
+        tablaBody.innerHTML = "";
         estado.classList.remove("oculto");
-        estado.textContent =
-            "❌ Error: No se encontraron carpetas en la selección.";
-        console.error("No se encontraron carpetas para procesar");
-        return;
-    }
+        barraProgresoDiv.classList.remove("oculto");
+        btnLimpiarTodo.classList.remove("oculto");
+        resumenDiv.classList.add("oculto");
+        filtrosDiv.classList.add("oculto");
 
-    let carpetasProcesadas = 0;
+        const carpetas = {};
+        const resultados = {};
+        const tipoValidacion = tipoValidacionSelect.value;
+        const tipoPaquete = tipoPaqueteSelect.value;
+        const convenio = convenioSelect.value;
 
-    for (const carpeta in carpetas) {
-        resultados[carpeta] = inicializarResultado(tipoValidacion, tipoPaquete);
-        if (tipoValidacion === "evento") {
-            detectarTipoCarpeta(carpeta, resultados[carpeta]);
-        } else {
-            resultados[carpeta].tipo = `Paquete: ${
-                tipoPaquete === "cronico" ? "Crónico" : "Crónico con terapias"
-            }`;
-        }
-        createPlaceholderRow(tablaBody, carpeta, tipoValidacion, tipoPaquete);
+        console.log("Configuración:", {
+            tipoValidacion,
+            tipoPaquete,
+            convenio,
+        });
 
-        const archivos = carpetas[carpeta];
-        const nombres = archivos.map((a) => a.name);
-        const nroDocumento = carpeta.match(/^\d+/)?.[0] || "";
-        resultados[carpeta].nroDocumento = nroDocumento;
-        resultados[carpeta].primerArchivoRelPath =
-            archivos[0]?.webkitRelativePath || carpeta;
-        resultados[carpeta].listaArchivos = nombres;
-        inicializarURLsArchivos(archivos, resultados[carpeta]);
+        actualizarHeadersTabla(
+            tabla,
+            tablaHeader,
+            tipoValidacion,
+            tipoPaquete,
+            convenio
+        );
 
-        if (tipoValidacion === "paquete") {
-            await validarPorPaquete(
-                carpeta,
-                archivos,
-                tipoPaquete,
-                nroDocumento,
-                resultados,
-                estado,
-                (carp, res) =>
-                    updateRow(
-                        tablaBody,
-                        carp,
-                        res,
-                        mostrarExitosCheckbox.checked
-                    ),
-                convenio,
-                (nombreArchivo) => {
-                    actualizarProgreso(
-                        carpetasProcesadas + 1,
-                        totalCarpetas,
-                        carpeta,
-                        nombreArchivo
-                    );
-                }
+        // console.log("=== INICIO AGRUPACIÓN DE ARCHIVOS (FS) ===");
+        for (const f of fsFiles) {
+            console.log(
+                `Procesando archivo: ${f.name}, webkitRelativePath: ${f.webkitRelativePath}`
             );
-        } else {
-            await procesarValidacionEvento(
-                carpeta,
-                archivos,
-                nombres,
-                nroDocumento,
-                resultados,
+
+            if (IGNORAR_ARCHIVOS.has(f.name.toLowerCase())) {
+                console.log(`  → Ignorado`);
+                continue;
+            }
+
+            const p = f.webkitRelativePath.split("/");
+            console.log(
+                `  → Partes: ${JSON.stringify(p)}, Length: ${p.length}`
+            );
+
+            if (p.length < 2) {
+                console.log(`  → Saltado: estructura inválida`);
+                continue;
+            }
+
+            const carpetaKey = p[p.length - 2];
+            console.log(`  → Carpeta detectada: ${carpetaKey}`);
+
+            carpetas[carpetaKey] ??= [];
+            carpetas[carpetaKey].push(f);
+        }
+
+        console.log("Carpetas agrupadas:", Object.keys(carpetas));
+        // console.log("=== FIN AGRUPACIÓN (FS) ===");
+
+        const totalCarpetas = Object.keys(carpetas).length;
+
+        if (totalCarpetas === 0) {
+            estado.classList.remove("oculto");
+            estado.textContent =
+                "❌ Error: No se encontraron carpetas en la selección.";
+            console.error("No se encontraron carpetas para procesar");
+            return;
+        }
+
+        let carpetasProcesadas = 0;
+
+        for (const carpeta in carpetas) {
+            resultados[carpeta] = inicializarResultado(
+                tipoValidacion,
+                tipoPaquete,
                 convenio
             );
+            if (tipoValidacion === "evento") {
+                detectarTipoCarpeta(carpeta, resultados[carpeta], convenio);
+            } else {
+                resultados[carpeta].tipo = `Paquete: ${
+                    tipoPaquete === "cronico"
+                        ? "Crónico"
+                        : "Crónico con terapias"
+                }`;
+            }
+            createPlaceholderRow(
+                tablaBody,
+                carpeta,
+                tipoValidacion,
+                tipoPaquete
+            );
+
+            const archivos = carpetas[carpeta];
+            const nombres = archivos.map((a) => a.name);
+            const nroDocumento = carpeta.match(/^\d+/)?.[0] || "";
+            resultados[carpeta].nroDocumento = nroDocumento;
+            resultados[carpeta].primerArchivoRelPath =
+                archivos[0]?.webkitRelativePath || carpeta;
+            resultados[carpeta].listaArchivos = nombres;
+            inicializarURLsArchivos(archivos, resultados[carpeta]);
+
+            if (tipoValidacion === "paquete") {
+                await validarPorPaquete(
+                    carpeta,
+                    archivos,
+                    tipoPaquete,
+                    nroDocumento,
+                    resultados,
+                    estado,
+                    (carp, res) =>
+                        updateRow(
+                            tablaBody,
+                            carp,
+                            res,
+                            mostrarExitosCheckbox.checked
+                        ),
+                    convenio,
+                    (nombreArchivo) => {
+                        actualizarProgreso(
+                            carpetasProcesadas + 1,
+                            totalCarpetas,
+                            carpeta,
+                            nombreArchivo
+                        );
+                    }
+                );
+            } else {
+                await procesarValidacionEvento(
+                    carpeta,
+                    archivos,
+                    nombres,
+                    nroDocumento,
+                    resultados,
+                    convenio
+                );
+                // Actualizar fila después de procesar evento
+                updateRow(
+                    tablaBody,
+                    carpeta,
+                    resultados[carpeta],
+                    mostrarExitosCheckbox.checked
+                );
+            }
+
+            const row = document.querySelector(`tr[data-carpeta="${carpeta}"]`);
+            if (row) row.classList.remove("processing");
+            carpetasProcesadas++;
+            actualizarProgreso(carpetasProcesadas, totalCarpetas, carpeta);
+            actualizarResumen(resultados, true);
         }
 
-        const row = document.querySelector(`tr[data-carpeta="${carpeta}"]`);
-        if (row) row.classList.remove("processing");
-        carpetasProcesadas++;
-        actualizarProgreso(carpetasProcesadas, totalCarpetas, carpeta);
-        actualizarResumen(resultados, true);
-    }
+        todosLosResultados = resultados;
+        todasLasCarpetas = Object.keys(carpetas);
+        actualizarResumen(resultados, false);
+        btnDescargar.classList.remove("oculto");
+        estado.classList.add("oculto");
+        barraProgresoDiv.classList.add("oculto");
 
-    todosLosResultados = resultados;
-    todasLasCarpetas = Object.keys(carpetas);
-    actualizarResumen(resultados, false);
-    btnDescargar.classList.remove("oculto");
-    estado.classList.add("oculto");
-    barraProgresoDiv.classList.add("oculto");
+        console.log("Procesamiento completado exitosamente");
+    } catch (error) {
+        console.error("Error en procesarArchivosDesdeFS:", error);
+        estado.classList.remove("oculto");
+        estado.textContent = `❌ Error durante el procesamiento: ${error.message}`;
+    }
 }
 
 /**
  * Inicializa el objeto de resultados para una carpeta
  */
-function inicializarResultado(tipoValidacion, tipoPaquete) {
+function inicializarResultado(
+    tipoValidacion,
+    tipoPaquete,
+    convenio = "capital-salud"
+) {
     return {
         pdfs:
             tipoValidacion === "evento"
@@ -1004,6 +1096,7 @@ function inicializarResultado(tipoValidacion, tipoPaquete) {
         fileUrls: {},
         tipoValidacion,
         tipoPaquete,
+        convenio, // Guardamos convenio para el renderizado
         buscarEn2Paq: new Set(), // Para FOMAG: servicios a buscar en 2 paq.pdf
         numerosPorServicio: {}, // Para FOMAG: números extraídos por servicio
         numeroFomag: null, // Para FOMAG evento: número extraído del 2.pdf
@@ -1013,12 +1106,13 @@ function inicializarResultado(tipoValidacion, tipoPaquete) {
 /**
  * Detecta el tipo de carpeta basándose en su nombre
  */
-function detectarTipoCarpeta(carpeta, resultado) {
+function detectarTipoCarpeta(carpeta, resultado, convenio = "capital-salud") {
     const carpetaUpper = carpeta.toUpperCase();
     const tipoDetectado = ALLOWED_TYPES.find((t) => carpetaUpper.includes(t));
     resultado.tipo = tipoDetectado || null;
-
-    if (!tipoDetectado) {
+    // En FOMAG por evento, las carpetas pueden ser solo número y contener múltiples servicios.
+    // No marcar error si no se detecta tipo en nombre de carpeta.
+    if (!tipoDetectado && convenio !== "fomag") {
         resultado.errores.push(
             `Por Evento: la carpeta debe incluir un tipo válido (${ALLOWED_TYPES.join(
                 ", "
@@ -1031,6 +1125,7 @@ function detectarTipoCarpeta(carpeta, resultado) {
  * Inicializa las URLs de los archivos PDF
  */
 function inicializarURLsArchivos(archivos, resultado) {
+    // Mapear genéricos
     resultado.fileUrls = {
         "2.pdf": null,
         "3.pdf": null,
@@ -1039,8 +1134,14 @@ function inicializarURLsArchivos(archivos, resultado) {
     };
 
     for (const f of archivos) {
-        if (resultado.fileUrls.hasOwnProperty(f.name)) {
-            resultado.fileUrls[f.name] = URL.createObjectURL(f);
+        if (f.type === "application/pdf") {
+            const url = URL.createObjectURL(f);
+            // Guardar URL para nombre exacto
+            resultado.fileUrls[f.name] = url;
+            // Guardar también si coincide con genéricos
+            if (resultado.fileUrls.hasOwnProperty(f.name)) {
+                resultado.fileUrls[f.name] = url;
+            }
         }
     }
 }
@@ -1057,19 +1158,79 @@ async function procesarValidacionEvento(
     convenio
 ) {
     // Validar archivos permitidos primero
-    validarArchivosPermitidosEvento(archivos, resultados, carpeta);
+    validarArchivosPermitidosEvento(archivos, resultados, carpeta, convenio);
 
     // Verificar presencia de archivos
-    ["2.pdf", "3.pdf", "4.pdf", "5.pdf"].forEach((p) => {
-        if (nombres.includes(p)) {
-            resultados[carpeta].pdfs[p] = "✔";
-        } else {
-            resultados[carpeta].errores.push(`Falta ${p}`);
-        }
-    });
+    if (convenio === "fomag") {
+        // Para FOMAG por evento, considerar archivos por servicio
+        const tieneNum = (num) =>
+            nombres.some((n) => new RegExp(`^${num}\\s+`, "i").test(n));
+        ["2", "4", "5"].forEach((num) => {
+            const key = `${num}.pdf`;
+            if (nombres.includes(key) || tieneNum(num)) {
+                resultados[carpeta].pdfs[key] = "✔";
+            } else {
+                resultados[carpeta].errores.push(`Falta ${key}`);
+            }
+        });
+        // No exigir 3.pdf en FOMAG evento
+        resultados[carpeta].pdfs["3.pdf"] = nombres.includes("3.pdf")
+            ? "✔"
+            : "—";
+    } else {
+        ["2.pdf", "3.pdf", "4.pdf", "5.pdf"].forEach((p) => {
+            if (nombres.includes(p)) {
+                resultados[carpeta].pdfs[p] = "✔";
+            } else {
+                resultados[carpeta].errores.push(`Falta ${p}`);
+            }
+        });
+    }
 
-    // Validar cada PDF
-    for (const file of archivos.filter((f) => f.type === "application/pdf")) {
+    // Validar cada PDF (ordenados para que 2/4 se procesen antes que 5)
+    const archivosPDF = archivos
+        .filter((f) => f.type === "application/pdf")
+        .sort((a, b) => {
+            // Extraer número del nombre (ej: "2 tf.pdf" -> 2, "5.pdf" -> 5)
+            const numA = parseInt(a.name.match(/^(\d+)/)?.[1] || "99");
+            const numB = parseInt(b.name.match(/^(\d+)/)?.[1] || "99");
+            return numA - numB;
+        });
+
+    // Para FOMAG evento: detectar servicios y preparar procesamiento de 2 paq.pdf
+    let archivo2Paq = null;
+    const serviciosCon5 = new Set();
+
+    if (convenio === "fomag") {
+        archivo2Paq = archivos.find(
+            (f) => f.name.toLowerCase() === "2 paq.pdf"
+        );
+        for (const nombre of nombres) {
+            const match5 = nombre
+                .toLowerCase()
+                .match(
+                    /^5\s+(vm|enf12|enf|tf|tr|succion|suc|ts|psi|to|fon)\.pdf$/
+                );
+            if (match5) {
+                let serv = match5[1];
+                if (serv === "suc") serv = "succion";
+                serviciosCon5.add(serv.toUpperCase());
+            }
+        }
+
+        // Procesar 2 paq.pdf ANTES de los archivos 5 para tener las autorizaciones
+        if (archivo2Paq && serviciosCon5.size > 0) {
+            estado.textContent = `Procesando: ${carpeta} / 2 paq.pdf`;
+            await procesarArchivo2PaqEvento(archivo2Paq, carpeta, resultados, [
+                ...serviciosCon5,
+            ]);
+        }
+    }
+
+    for (const file of archivosPDF) {
+        // Saltar 2 paq.pdf ya que se procesó arriba
+        if (file.name.toLowerCase() === "2 paq.pdf") continue;
+
         estado.textContent = `Procesando: ${carpeta} / ${file.name}`;
         // Actualizar barra de progreso con archivo actual
         const carpetaIndex = todasLasCarpetas.indexOf(carpeta) + 1;

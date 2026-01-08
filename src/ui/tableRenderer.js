@@ -44,7 +44,8 @@ export function actualizarHeadersTabla(
     tabla,
     tablaHeader,
     tipoValidacion,
-    tipoPaquete
+    tipoPaquete,
+    convenio = "capital-salud"
 ) {
     // Resetear mapa de grupos
     gruposPorCarpeta.clear();
@@ -52,11 +53,42 @@ export function actualizarHeadersTabla(
 
     tabla.classList.remove(
         "modo-evento",
+        "modo-evento-fomag",
         "modo-paquete-fijo",
         "modo-paquete-dinamico"
     );
 
-    if (tipoValidacion === "evento") {
+    // Remover colgroup anterior si existe
+    let colgroup = tabla.querySelector("colgroup");
+    if (colgroup) colgroup.remove();
+
+    if (tipoValidacion === "evento" && convenio === "fomag") {
+        // Evento FOMAG: vista por servicios (similar a paquete)
+        tabla.classList.add("modo-evento-fomag");
+        tablaHeader.innerHTML = `
+            <tr>
+                <th>Carpeta</th>
+                <th>Servicio</th>
+                <th>Archivos</th>
+                <th>Cant Auto</th>
+                <th>Cant Evol</th>
+                <th>Evoluciones</th>
+                <th>Errores</th>
+            </tr>
+        `;
+        const colgroupHTML = `
+            <colgroup>
+                <col style="width: 120px;">
+                <col style="width: 140px;">
+                <col style="width: 150px;">
+                <col style="width: 70px;">
+                <col style="width: 70px;">
+                <col style="width: 140px;">
+                <col style="width: 280px;">
+            </colgroup>
+        `;
+        tabla.insertAdjacentHTML("afterbegin", colgroupHTML);
+    } else if (tipoValidacion === "evento") {
         tabla.classList.add("modo-evento");
         tablaHeader.innerHTML = `
             <tr>
@@ -71,12 +103,6 @@ export function actualizarHeadersTabla(
                 <th>Errores</th>
             </tr>
         `;
-
-        // Remover colgroup anterior si existe
-        let colgroup = tabla.querySelector("colgroup");
-        if (colgroup) colgroup.remove();
-
-        // Agregar colgroup para modo evento
         const colgroupHTML = `
             <colgroup>
                 <col style="width: 100px;">
@@ -173,8 +199,11 @@ export function createPlaceholderRow(
  * Actualiza una fila existente de la tabla
  */
 export function updateRow(tablaBody, carpeta, r, mostrarExitos = false) {
-    // Para paquetes, eliminar las filas existentes del grupo y recrearlas
-    if (r.tipoValidacion === "paquete") {
+    // Para paquetes o eventos FOMAG, eliminar las filas existentes del grupo y recrearlas
+    if (
+        r.tipoValidacion === "paquete" ||
+        (r.tipoValidacion === "evento" && r.convenio === "fomag")
+    ) {
         const existingRows = document.querySelectorAll(
             `tr[data-carpeta="${carpeta}"]`
         );
@@ -182,9 +211,9 @@ export function updateRow(tablaBody, carpeta, r, mostrarExitos = false) {
         return pintarFila(tablaBody, carpeta, r, mostrarExitos);
     }
 
-    // Para eventos, actualizar la fila existente
+    // Para eventos normales, actualizar la fila existente
     const existing = document.querySelector(`tr[data-carpeta="${carpeta}"]`);
-    if (!existing) return pintarFila(tablaBody, carpeta, r);
+    if (!existing) return pintarFila(tablaBody, carpeta, r, mostrarExitos);
 
     const fechasUnicas = [...new Set(r.fechas)];
     const fechasFormateadas = fechasUnicas.map(formatearFecha);
@@ -239,8 +268,11 @@ export function pintarFila(tablaBody, carpeta, r, mostrarExitos = false) {
             erroresHTML,
             mostrarExitos
         );
+    } else if (r.tipoValidacion === "evento" && r.convenio === "fomag") {
+        // Para eventos FOMAG, crear filas por servicio detectado
+        renderEventoFomagFilas(tablaBody, carpeta, r, mostrarExitos);
     } else {
-        // Para eventos, si hay servicio "General", mostrar también esos errores
+        // Para eventos normales (Capital Salud), mostrar vista clásica
         const tr = document.createElement("tr");
         tr.setAttribute("data-carpeta", carpeta);
         tr.classList.remove("processing");
@@ -300,6 +332,7 @@ function renderPaqueteFilas(
         "General",
         "VM",
         "ENF",
+        "ENF12",
         "TR",
         "TF",
         "SUCCION",
@@ -476,6 +509,250 @@ function renderPaqueteFilas(
 
         tablaBody.appendChild(tr);
     });
+}
+
+/**
+ * Renderiza filas de evento FOMAG - una fila por servicio detectado
+ */
+function renderEventoFomagFilas(tablaBody, carpeta, r, mostrarExitos = false) {
+    const grupoClase = obtenerGrupoClase(carpeta);
+
+    // Detectar servicios desde los nombres de archivos
+    const serviciosDetectados = new Set();
+    const archivosPorServicio = {};
+
+    for (const archivo of r.listaArchivos || []) {
+        const match = archivo
+            .toLowerCase()
+            .match(
+                /^([2-5])\s+(vm|enf12|enf|tf|tr|succion|suc|ts|psi|to|fon)\.pdf$/
+            );
+        if (match) {
+            let serv = match[2];
+            if (serv === "suc") serv = "succion";
+            const servicioUpper = serv.toUpperCase();
+            serviciosDetectados.add(servicioUpper);
+            archivosPorServicio[servicioUpper] =
+                archivosPorServicio[servicioUpper] || [];
+            archivosPorServicio[servicioUpper].push(archivo);
+        }
+    }
+
+    // Si no hay servicios detectados, mostrar fila con errores generales
+    if (serviciosDetectados.size === 0) {
+        const tr = document.createElement("tr");
+        tr.setAttribute("data-carpeta", carpeta);
+        tr.classList.add(
+            "paquete-row",
+            grupoClase,
+            "grupo-inicio",
+            "grupo-fin"
+        );
+
+        const erroresHTML = renderErrorItems(r.errores) || "—";
+        const tieneErrores = r.errores.length > 0;
+        tr.setAttribute(
+            "data-estado",
+            tieneErrores ? "con-errores" : "sin-errores"
+        );
+
+        tr.innerHTML = `
+            <td class="carpeta-cell"><span class="carpeta-nombre">${carpeta}
+                <button class="copy-inline-btn" onclick="copiarNumero(event,'${carpeta}')" title="Copiar número">📋</button>
+            </span></td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>${erroresHTML}</td>
+        `;
+        tablaBody.appendChild(tr);
+        return;
+    }
+
+    // Orden de servicios
+    const ordenServicios = [
+        "VM",
+        "ENF",
+        "ENF12",
+        "TR",
+        "TF",
+        "SUCCION",
+        "FON",
+        "PSI",
+        "TS",
+        "TO",
+    ];
+    const serviciosArray = [...serviciosDetectados].sort((a, b) => {
+        const indexA = ordenServicios.indexOf(a);
+        const indexB = ordenServicios.indexOf(b);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.localeCompare(b);
+    });
+
+    serviciosArray.forEach((servicio, index) => {
+        const tr = document.createElement("tr");
+        tr.setAttribute("data-carpeta", carpeta);
+        tr.setAttribute("data-servicio", servicio);
+        tr.classList.add("paquete-row", grupoClase);
+
+        if (index === 0) tr.classList.add("grupo-inicio");
+        if (index === serviciosArray.length - 1) tr.classList.add("grupo-fin");
+
+        const nombreCompleto = SERVICIOS_NOMBRES[servicio] || servicio;
+        const archivosServicio = archivosPorServicio[servicio] || [];
+        const servicioLower =
+            servicio === "SUCCION" ? "succion" : servicio.toLowerCase();
+
+        // Generar links a los archivos
+        // Si el servicio tiene autorizaciones pero no tiene archivo 2 individual, agregar 2 paq.pdf
+        // Solo archivos "2 [servicio].pdf" contienen autorizaciones (no el 4)
+        const tiene2Individual = archivosServicio.some((a) =>
+            a.match(/^2\s+/i)
+        );
+        const tieneAutoDe2Paq =
+            r.numerosPorServicio?.[servicio] && !tiene2Individual;
+
+        let archivosParaMostrar = [...archivosServicio];
+        if (tieneAutoDe2Paq) {
+            // Agregar 2 paq.pdf al inicio si se usó para este servicio
+            const tiene2Paq = (r.listaArchivos || []).some(
+                (a) => a.toLowerCase() === "2 paq.pdf"
+            );
+            if (tiene2Paq) {
+                archivosParaMostrar.unshift("2 paq.pdf");
+            }
+        }
+
+        const archivosHTML = archivosParaMostrar
+            .map((archivo) => {
+                const urlKey = Object.keys(r.fileUrls).find(
+                    (k) => k.toLowerCase() === archivo.toLowerCase()
+                );
+                const url = urlKey ? r.fileUrls[urlKey] : null;
+                if (url) {
+                    return `<a href="#" onclick="abrirPDFModal('${url}', '${archivo}', this); return false;" class="archivo-link ok" title="Abrir ${archivo}">${archivo}</a>`;
+                }
+                return `<span class="archivo-link">${archivo}</span>`;
+            })
+            .join(" ");
+
+        // Cantidad de autorizaciones del servicio
+        const cantAuto = r.numerosPorServicio?.[servicio] || 0;
+
+        // Extraer fechas de los archivos 5 de este servicio
+        const fechasServicio = r.fechasPorServicio?.[servicio] || [];
+        const fechasUnicas = [...new Set(fechasServicio)];
+        const cantEvol = fechasUnicas.length;
+        const fechasFormateadas = fechasUnicas.map(formatearFecha);
+        const fechasPills = fechasFormateadas
+            .map((f) => `<span class="fecha-text">${f}</span>`)
+            .join("");
+        const scrollClass = fechasFormateadas.length > 4 ? "fechas-scroll" : "";
+        const fechasHTML =
+            fechasFormateadas.length > 0
+                ? `<div class="fechas-list ${scrollClass}">${fechasPills}</div>`
+                : "—";
+
+        // Errores del servicio (ya están separados por servicio en erroresPorServicio)
+        const erroresServicio = r.erroresPorServicio?.[servicio] || [];
+        // Alertas del servicio
+        const alertasServicio = r.alertasPorServicio?.[servicio] || [];
+        const erroresHTML = renderErrorItems(erroresServicio);
+        const alertasHTML = alertasServicio
+            .map((a) => `<div class="alerta-item">⚠️ ${a}</div>`)
+            .join("");
+
+        const exitosServicio = r.exitosPorServicio?.[servicio] || [];
+        // Siempre generar HTML de éxitos pero ocultos por defecto si mostrarExitos es false
+        const exitosHTML =
+            exitosServicio.length > 0
+                ? exitosServicio
+                      .map(
+                          (e) =>
+                              `<div class="exito-item validacion-exitosa" style="display: ${
+                                  mostrarExitos ? "" : "none"
+                              }">✓ ${e}</div>`
+                      )
+                      .join("")
+                : "";
+
+        const tieneErrores = erroresServicio.length > 0;
+        tr.setAttribute(
+            "data-estado",
+            tieneErrores ? "con-errores" : "sin-errores"
+        );
+
+        const soloExitos =
+            exitosServicio.length > 0 &&
+            erroresServicio.length === 0 &&
+            alertasServicio.length === 0;
+        // El badge se oculta cuando mostrarExitos es true (porque se ven los éxitos detallados)
+        const badgeExito =
+            soloExitos && !mostrarExitos
+                ? `<div class="badge-exito">✔ Todo correcto</div>`
+                : "";
+        // Siempre incluir exitosHTML (aunque esté oculto) para que el filtro pueda mostrarlo
+        const contenidoHTML =
+            badgeExito + exitosHTML + alertasHTML + erroresHTML;
+        const erroresServicioHTML = contenidoHTML || "—";
+
+        // Colorear cantidad de autorizaciones según comparación (solo errores y alertas)
+        let cantAutoClass = "";
+        if (cantAuto > 0 && cantEvol > 0) {
+            if (cantAuto < cantEvol) cantAutoClass = "cant-error";
+            else if (cantAuto > cantEvol) cantAutoClass = "cant-alerta";
+            // No colorear verde cuando coinciden
+        }
+
+        tr.innerHTML = `
+            <td class="carpeta-cell"><span class="carpeta-nombre">${carpeta}
+                <button class="copy-inline-btn" onclick="copiarNumero(event,'${carpeta}')" title="Copiar número">📋</button>
+            </span></td>
+            <td class="servicio-nombre">${nombreCompleto}</td>
+            <td>${archivosHTML || "—"}</td>
+            <td class="${cantAutoClass}">${cantAuto || "—"}</td>
+            <td>${cantEvol || "—"}</td>
+            <td>${fechasHTML}</td>
+            <td>${erroresServicioHTML}</td>
+        `;
+
+        tablaBody.appendChild(tr);
+    });
+
+    // Si hay errores generales que no son de ningún servicio específico, mostrarlos
+    const erroresGeneralesNoServicio = r.errores.filter((e) => {
+        const eLower = e.toLowerCase();
+        return !serviciosArray.some((s) => {
+            const sLower = s === "SUCCION" ? "succion" : s.toLowerCase();
+            return eLower.includes(sLower) || eLower.includes(`${sLower}.pdf`);
+        });
+    });
+
+    if (erroresGeneralesNoServicio.length > 0) {
+        const tr = document.createElement("tr");
+        tr.setAttribute("data-carpeta", carpeta);
+        tr.setAttribute("data-servicio", "General");
+        tr.classList.add("paquete-row", grupoClase);
+        tr.setAttribute("data-estado", "con-errores");
+
+        const erroresHTML = renderErrorItems(erroresGeneralesNoServicio);
+
+        tr.innerHTML = `
+            <td class="carpeta-cell"><span class="carpeta-nombre">${carpeta}</span></td>
+            <td class="servicio-nombre">⚠️ General</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>${erroresHTML}</td>
+        `;
+
+        tablaBody.appendChild(tr);
+    }
 }
 
 function renderEvento(

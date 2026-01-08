@@ -47,7 +47,7 @@ export function validarArchivosPermitidosPaquete(
 
         // Patrón válido: "2 vm.pdf", "4 enf.pdf", etc.
         const patronServicio =
-            /^[2-5]\s+(vm|enf|tf|tr|succion|suc|ts|psi|to|fon)\.pdf$/;
+            /^[2-5]\s+(vm|enf12|enf|tf|tr|succion|suc|ts|psi|to|fon)\.pdf$/;
 
         // Patrón válido solo para FOMAG: "2 paq.pdf"
         const patron2Paq = /^2\s+paq\.pdf$/;
@@ -230,6 +230,73 @@ export async function validarPorPaquete(
 
         updateRow(carpeta, resultados[carpeta]);
     }
+
+    // Validaciones finales por tipo de paquete (post-procesamiento)
+    // Asegurar que existe "General" en servicios y erroresPorServicio
+    if (tipoPaquete === "cronico" || tipoPaquete === "cronico-terapias") {
+        resultados[carpeta].servicios.add("General");
+        resultados[carpeta].erroresPorServicio["General"] =
+            resultados[carpeta].erroresPorServicio["General"] || [];
+        resultados[carpeta].exitosPorServicio["General"] =
+            resultados[carpeta].exitosPorServicio["General"] || [];
+        resultados[carpeta].alertasPorServicio["General"] =
+            resultados[carpeta].alertasPorServicio["General"] || [];
+    }
+
+    if (tipoPaquete === "cronico") {
+        // En paquete crónico: exactamente 1 VM y 1 ENF
+        const cantVM =
+            resultados[carpeta].fechasPorServicio?.["VM"]?.length || 0;
+        const cantENF =
+            resultados[carpeta].fechasPorServicio?.["ENF"]?.length || 0;
+
+        if (cantVM !== 1) {
+            resultados[carpeta].erroresPorServicio["General"].push(
+                `Paquete Crónico debe tener exactamente 1 evolución de VM (tiene ${cantVM})`
+            );
+        } else {
+            resultados[carpeta].exitosPorServicio["General"].push(
+                `VM: 1 evolución ✓`
+            );
+        }
+
+        if (cantENF !== 1) {
+            resultados[carpeta].erroresPorServicio["General"].push(
+                `Paquete Crónico debe tener exactamente 1 evolución de ENF (tiene ${cantENF})`
+            );
+        } else {
+            resultados[carpeta].exitosPorServicio["General"].push(
+                `ENF: 1 evolución ✓`
+            );
+        }
+    } else if (tipoPaquete === "cronico-terapias") {
+        // En crónico con terapias: suma de evoluciones de TF, TR, FON, TO debe estar entre 6-10
+        const TERAPIAS_CONTABLES = new Set(["TF", "TR", "FON", "TO"]);
+
+        // Sumar evoluciones SOLO de las 4 terapias permitidas
+        let totalTerapias = 0;
+        for (const s of TERAPIAS_CONTABLES) {
+            totalTerapias +=
+                resultados[carpeta].fechasPorServicio?.[s]?.length || 0;
+        }
+
+        if (totalTerapias < 6) {
+            resultados[carpeta].erroresPorServicio["General"].push(
+                `Paquete Crónico con Terapias debe tener mínimo 6 terapias (tiene ${totalTerapias})`
+            );
+        } else if (totalTerapias > 10) {
+            resultados[carpeta].erroresPorServicio["General"].push(
+                `Paquete Crónico con Terapias debe tener máximo 10 terapias (tiene ${totalTerapias})`
+            );
+        } else {
+            resultados[carpeta].exitosPorServicio["General"].push(
+                `Terapias (TF+TR+FON+TO): ${totalTerapias} (6-10) ✓`
+            );
+        }
+    }
+
+    // Refrescar fila después de validaciones finales
+    updateRow(carpeta, resultados[carpeta]);
 }
 
 /**

@@ -5,6 +5,7 @@ export const DEBUG = true;
 export const ALLOWED_TYPES = [
     "VM",
     "ENF",
+    "ENF12",
     "TF",
     "TR",
     "SUCCION",
@@ -20,6 +21,7 @@ export const SERVICIOS_NOMBRES = {
     General: "⚠️ General",
     VM: "👨‍⚕️ Valoración Médica",
     ENF: "🩺 Enfermería",
+    ENF12: "🩺 Enfermería 12h",
     TF: "🏃 Terapia Física",
     TR: "🫁 Terapia Respiratoria",
     SUCCION: "💨 Succión",

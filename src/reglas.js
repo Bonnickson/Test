@@ -52,6 +52,10 @@ const REGLAS_ARCHIVO_5 = {
         debeContener: ["Registro De Terapia Ocupacional"],
         igualarConFechas: true,
     },
+    ENF12: {
+        debeContener: ["ENFERMERIA 12 HORAS"],
+        igualarConFechas: true,
+    },
 };
 
 // ========================================
@@ -79,6 +83,10 @@ const REGLAS_ARCHIVO_2_CAPITAL = {
     PSI: { debeContener: "PSICOLOGIA", igualarConFechas: false },
     TS: { debeContener: "TRABAJO SOCIAL", igualarConFechas: false },
     TO: { debeContener: "TERAPIA OCUPACIONAL", igualarConFechas: false },
+    ENF12: {
+        debeContener: "ATENCION (VISITA) DOMICILIARIA, POR ENFERMERIA",
+        igualarConFechas: false,
+    },
 };
 
 // --- FOMAG ---
@@ -131,6 +139,11 @@ const REGLAS_ARCHIVO_2_FOMAG = {
         igualarConFechas: true,
         extraerNumero: true,
     },
+    ENF12: {
+        debeContener: "ATENCION (VISITA) DOMICILIARIA, POR ENFERMERIA",
+        igualarConFechas: true,
+        extraerNumero: true,
+    },
 };
 
 // ========================================
@@ -163,6 +176,7 @@ export function obtenerReglasEvento(convenio) {
         PSI: { "2.pdf": reglas2.PSI, "5.pdf": REGLAS_ARCHIVO_5.PSI },
         TS: { "2.pdf": reglas2.TS, "5.pdf": REGLAS_ARCHIVO_5.TS },
         TO: { "2.pdf": reglas2.TO, "5.pdf": REGLAS_ARCHIVO_5.TO },
+        ENF12: { "2.pdf": reglas2.ENF12, "5.pdf": REGLAS_ARCHIVO_5.ENF12 },
     };
 }
 
@@ -211,6 +225,7 @@ export function obtenerReglasPaquete(convenio) {
         PSI: { "2.pdf": reglas2Paquete.PSI, "5.pdf": reglas5Paquete.PSI },
         TS: { "2.pdf": reglas2Paquete.TS, "5.pdf": reglas5Paquete.TS },
         TO: { "2.pdf": reglas2Paquete.TO, "5.pdf": reglas5Paquete.TO },
+        ENF12: { "2.pdf": reglas2Paquete.ENF12, "5.pdf": reglas5Paquete.ENF12 },
     };
 }
 
