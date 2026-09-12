@@ -4,7 +4,7 @@ import {
 } from "../config/constants.js";
 
 /**
- * Extrae el código de paquete soportado si existe al inicio del nombre de una carpeta
+ * Extrae el código de paquete si existe al inicio del nombre de una carpeta (ej: CPF1108, CPF1111, etc.)
  * @param {string} nombreCarpeta
  * @returns {string|null}
  */
@@ -13,7 +13,7 @@ export function extraerCodigoPaquete(nombreCarpeta) {
     const match = nombreCarpeta.trim().match(/^([A-Za-z0-9]+)/);
     if (!match) return null;
     const code = match[1].toUpperCase();
-    return PAQUETES_SOPORTADOS.includes(code) ? code : null;
+    return code.startsWith("CPF") || PAQUETES_SOPORTADOS.includes(code) ? code : null;
 }
 
 /**
@@ -35,6 +35,11 @@ export function agruparArchivosInteligente(
 
     for (const f of archivosLista) {
         if (IGNORAR_ARCHIVOS.has(f.name.toLowerCase())) {
+            continue;
+        }
+
+        // Solo procesar archivos PDF para la validación de soportes
+        if (!f.name.toLowerCase().endsWith(".pdf")) {
             continue;
         }
 
@@ -103,8 +108,14 @@ export function agruparArchivosInteligente(
         }
 
         let key = carpetaPaciente;
-        if (carpetas[key] && carpetas[key].tipoPaquete !== paqueteDetectado) {
-            key = `${carpetaPaciente} (${paqueteDetectado})`;
+        if (carpetas[key]) {
+            if (carpetas[key].tipoPaquete !== paqueteDetectado) {
+                // Si ya existe otra carpeta con este mismo paciente pero diferente paquete, separar en filas independientes
+                const keyExistente = `${carpetas[key].carpetaNombre} (${carpetas[key].tipoPaquete})`;
+                carpetas[keyExistente] = carpetas[key];
+                delete carpetas[key];
+                key = `${carpetaPaciente} (${paqueteDetectado})`;
+            }
         }
 
         if (!carpetas[key]) {

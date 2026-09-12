@@ -15,6 +15,7 @@ import {
 } from "../utils/textUtils.js";
 import {
     extraerTextoPDF,
+    extraerTextoOCRDePDF,
     extraerFechas,
     validarOrdenFechas,
 } from "../utils/pdfUtils.js";
@@ -289,24 +290,37 @@ export async function validarPorPaquete(
             );
         }
 
-        if (cantENF !== 1) {
-            resultados[carpeta].erroresPorServicio["General"].push(
-                `Paquete ${tipoPaquete} debe tener exactamente 1 evolución de ENF (tiene ${cantENF})`
-            );
-        } else {
-            resultados[carpeta].exitosPorServicio["General"].push(
-                `ENF: 1 evolución ✓`
-            );
-        }
+        const tieneEnf = resultados[carpeta].servicios?.has("ENF");
+        const tieneVenf = resultados[carpeta].servicios?.has("VENF");
 
-        if (cantVENF !== 1) {
+        if (!tieneEnf && !tieneVenf) {
             resultados[carpeta].erroresPorServicio["General"].push(
-                `Paquete ${tipoPaquete} debe tener exactamente 1 evolución de VENF (tiene ${cantVENF})`
+                `Paquete ${tipoPaquete} debe incluir al menos un servicio de enfermería (ENF o VENF)`
             );
         } else {
-            resultados[carpeta].exitosPorServicio["General"].push(
-                `VENF: 1 evolución ✓`
-            );
+            if (tieneEnf) {
+                if (cantENF !== 1) {
+                    resultados[carpeta].erroresPorServicio["General"].push(
+                        `Paquete ${tipoPaquete} debe tener exactamente 1 evolución de ENF (tiene ${cantENF})`
+                    );
+                } else {
+                    resultados[carpeta].exitosPorServicio["General"].push(
+                        `ENF: 1 evolución ✓`
+                    );
+                }
+            }
+
+            if (tieneVenf) {
+                if (cantVENF !== 1) {
+                    resultados[carpeta].erroresPorServicio["General"].push(
+                        `Paquete ${tipoPaquete} debe tener exactamente 1 evolución de VENF (tiene ${cantVENF})`
+                    );
+                } else {
+                    resultados[carpeta].exitosPorServicio["General"].push(
+                        `VENF: 1 evolución ✓`
+                    );
+                }
+            }
         }
 
         // Validar que el opcional seleccionado tenga exactamente 1 evolución
@@ -393,13 +407,13 @@ function validarNuevoPaquete(
         [...serviciosEncontrados].filter((s) => s !== "General" && s !== "PAQ")
     );
 
-    // 1. Validar Obligatorios (VM, ENF, VENF) solo si no hay matriz
+    // 1. Validar Obligatorios (VM y al menos una de ENF o VENF) solo si no hay matriz
     if (!resultados[carpeta].datosMatriz) {
-        const obligatorios = ["VM", "ENF", "VENF"];
-        for (const req of obligatorios) {
-            if (!serviciosReales.has(req)) {
-                resultados[carpeta].errores.push(`Paquete ${tipoPaquete} debe incluir servicio obligatorio ${req}`);
-            }
+        if (!serviciosReales.has("VM")) {
+            resultados[carpeta].errores.push(`Paquete ${tipoPaquete} debe incluir servicio obligatorio VM`);
+        }
+        if (!serviciosReales.has("ENF") && !serviciosReales.has("VENF")) {
+            resultados[carpeta].errores.push(`Paquete ${tipoPaquete} debe incluir al menos un servicio de enfermería (ENF o VENF)`);
         }
 
         // 2. Validar "Uno de los siguientes" (PSI, NUT, TS)
@@ -469,11 +483,25 @@ async function validarPDFPaquete(
             data: await file.arrayBuffer(),
         }).promise;
 
-        const texto = await extraerTextoPDF(pdf);
-        const textoPlanoNorm = normalizeForSearch(texto);
+        let texto = await extraerTextoPDF(pdf);
+        let textoPlanoNorm = normalizeForSearch(texto);
+
+        // Helper para reintentar con OCR si aún no se ha ejecutado
+        let ocrEjecutado = false;
+        const asegurarOCR = async (terminoBuscado = "") => {
+            if (!ocrEjecutado) {
+                ocrEjecutado = true;
+                const textoOCR = await extraerTextoOCRDePDF(pdf, 2, terminoBuscado);
+                if (textoOCR && textoOCR.trim().length > 0) {
+                    texto = (texto + " " + textoOCR).trim();
+                    textoPlanoNorm = normalizeForSearch(texto);
+                    fechas = extraerFechas(texto);
+                }
+            }
+        };
 
         // Extraer fechas
-        const fechas = extraerFechas(texto);
+        let fechas = extraerFechas(texto);
 
         // Determinar si es archivo "2 paq.pdf" (solo para fomag, o los nuevos)
         const esPaquete = file.name.toLowerCase().includes("paq.pdf") || file.name.toLowerCase().includes("paq");
@@ -486,11 +514,19 @@ async function validarPDFPaquete(
             servicio !== "PAQ"
         ) {
             if (!textoPlanoNorm.includes(nroDocumento)) {
+                await asegurarOCR(nroDocumento);
+            }
+
+            if (!textoPlanoNorm.includes(nroDocumento)) {
                 resultados[carpeta].erroresPorServicio[servicio] =
                     resultados[carpeta].erroresPorServicio[servicio] || [];
                 resultados[carpeta].erroresPorServicio[servicio].push(
                     `${file.name}: no contiene número ${nroDocumento}`
                 );
+                // Marcar el badge del archivo con ✗
+                if (resultados[carpeta].pdfsPorServicio[servicio] && numArchivo) {
+                    resultados[carpeta].pdfsPorServicio[servicio][numArchivo] = "✗";
+                }
             } else {
                 // Agregar mensaje de éxito cuando se encuentra el documento
                 resultados[carpeta].exitosPorServicio[servicio] =
@@ -503,6 +539,10 @@ async function validarPDFPaquete(
 
         // Si es paquete CPF nuevo y es el archivo "2 PAQ.pdf"
         if (esPaquete && numArchivo === "2" && tipoPaquete.startsWith("CPF")) {
+            if (!textoPlanoNorm.includes(tipoPaquete.toUpperCase())) {
+                await asegurarOCR();
+            }
+
             // Validar que el código del paquete exista en el PDF
             if (!textoPlanoNorm.includes(tipoPaquete.toUpperCase())) {
                 resultados[carpeta].erroresPorServicio["General"] = resultados[carpeta].erroresPorServicio["General"] || [];
@@ -692,6 +732,18 @@ async function validarPDFPaquete(
                     if (textoPlanoNorm.includes(buscarNorm)) {
                         textoEncontrado = buscar;
                         break;
+                    }
+                }
+
+                // Si no se encontró el texto, intentar OCR
+                if (!textoEncontrado) {
+                    await asegurarOCR();
+                    for (const buscar of textosABuscar) {
+                        const buscarNorm = normalizeForSearch(buscar);
+                        if (textoPlanoNorm.includes(buscarNorm)) {
+                            textoEncontrado = buscar;
+                            break;
+                        }
                     }
                 }
 

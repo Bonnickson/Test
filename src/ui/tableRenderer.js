@@ -1,4 +1,8 @@
-import { formatearFecha, formatearFechaCompacta } from "../utils/textUtils.js";
+import {
+    formatearFecha,
+    formatearFechaCompacta,
+    formatearErrorConIconosPDF,
+} from "../utils/textUtils.js";
 import {
     SERVICIOS_NOMBRES,
     PAQUETES_INFO,
@@ -13,7 +17,8 @@ let contadorGrupo = 0;
 const renderErrorItem = (errorText) => {
     const { tipo } = clasificarErrorResumen(errorText);
     const tipoNorm = normalizarTipoError(tipo);
-    return `<div class="error-item" data-error-type="${tipo}" data-error-type-normalized="${tipoNorm}"><span class="error-icon">✕</span> <span>${errorText}</span></div>`;
+    const errorFormateado = formatearErrorConIconosPDF(errorText);
+    return `<div class="error-item" data-error-type="${tipo}" data-error-type-normalized="${tipoNorm}"><span class="error-icon">✕</span> <span>${errorFormateado}</span></div>`;
 };
 
 const renderErrorItems = (errors = []) =>
@@ -378,8 +383,8 @@ function renderPaqueteFilas(
     trHeader.setAttribute("data-estado", estadoGeneral);
 
     const erroresGeneralesHeaderHTML = [
-        ...exitosGenerales.map(e => `<div class="exito-item validacion-exitosa" style="display: ${mostrarExitos ? "" : "none"}">✓ ${e}</div>`),
-        ...alertasGenerales.map(a => `<div class="alerta-item"><span class="alerta-icon">⚠️</span> <strong>${a}</strong></div>`),
+        ...exitosGenerales.map(e => `<div class="exito-item validacion-exitosa" style="display: ${mostrarExitos ? "" : "none"}">✓ ${formatearErrorConIconosPDF(e)}</div>`),
+        ...alertasGenerales.map(a => `<div class="alerta-item"><span class="alerta-icon">⚠️</span> <strong>${formatearErrorConIconosPDF(a)}</strong></div>`),
         renderErrorItems(erroresGenerales)
     ].filter(Boolean).join("") || "";
 
@@ -539,11 +544,11 @@ function renderPaqueteFilas(
             .map(
                 (e) =>
                     `<div class="exito-item validacion-exitosa" style="display: ${mostrarExitos ? "" : "none"
-                    }">✓ ${e}</div>`
+                    }">✓ ${formatearErrorConIconosPDF(e)}</div>`
             )
             .join("");
         const alertasHTML = alertasServicioRender
-            .map((e) => `<div class="alerta-item"><span class="alerta-icon">⚠️</span> <strong>${e}</strong></div>`)
+            .map((e) => `<div class="alerta-item"><span class="alerta-icon">⚠️</span> <strong>${formatearErrorConIconosPDF(e)}</strong></div>`)
             .join("");
         const erroresHTML = renderErrorItems(erroresServicio);
 

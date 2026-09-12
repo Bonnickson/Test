@@ -4946,3 +4946,76 @@ body.theme-dark .preval-modal-footer {
     color: var(--text-muted);
 }
 
+/* Toast flotante de copiado */
+.tooltip-copy {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    z-index: 99999;
+    pointer-events: none;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    white-space: nowrap;
+    max-width: 90vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    animation: toastFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.theme-light .tooltip-copy {
+    background: #1e293b;
+    color: #ffffff;
+}
+
+@keyframes toastFadeIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 12px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+/* Badge de archivo PDF en mensajes de error y alertas */
+.pdf-file-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.92em;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    padding: 1px 5px;
+    border-radius: 4px;
+    vertical-align: baseline;
+    margin: 0 2px;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+body.theme-light .pdf-file-badge {
+    color: #dc2626;
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+.pdf-file-badge-icon {
+    width: 11px;
+    height: 11px;
+    stroke: currentColor;
+    flex-shrink: 0;
+    display: inline-block;
+    vertical-align: -1px;
+}
+

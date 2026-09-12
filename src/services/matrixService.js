@@ -11,7 +11,7 @@ export const MAPEO_COLUMNAS_MATRIZ = {
     DOCUMENTO: 1,      // Col B
     NOMBRE: 2,         // Col C
     PAQUETE: 3,        // Col D
-    // Col E (4): Facturar evento (omitido)
+    FACTURAR_EVENTO: 4,// Col E: Facturar evento
     // Col F (5): Geriatria (omitido)
     VM: 6,             // Col G: Paq. Médica General
     ENF_PROF: 7,       // Col H: Paq. Enfermería Profesional
@@ -88,11 +88,11 @@ function parseCantidad(val) {
 }
 
 /**
- * Normaliza documento (solo caracteres alfanuméricos)
+ * Normaliza documento (mantiene el valor recortando espacios en los extremos)
  */
 export function normalizarDocumentoMatriz(doc) {
     if (doc === null || doc === undefined) return "";
-    return String(doc).replace(/[^a-zA-Z0-9]/g, "").trim();
+    return String(doc).trim();
 }
 
 /**
@@ -132,9 +132,10 @@ export function parsearMatriz(rawRows) {
         const documento = normalizarDocumentoMatriz(docRaw);
         const nombre = String(fila[MAPEO_COLUMNAS_MATRIZ.NOMBRE] || "").trim();
         const paqueteRaw = String(fila[MAPEO_COLUMNAS_MATRIZ.PAQUETE] || "").trim().toUpperCase();
+        const facturarEventoRaw = String(fila[MAPEO_COLUMNAS_MATRIZ.FACTURAR_EVENTO] || "").trim().toUpperCase();
 
         // Si la fila está completamente vacía, ignorar
-        if (!documento && !nombre && !paqueteRaw) continue;
+        if (!documento && !nombre && !paqueteRaw && !facturarEventoRaw) continue;
 
         const erroresFila = [];
         const alertasFila = [];
@@ -150,10 +151,22 @@ export function parsearMatriz(rawRows) {
             paquete = matchPaq[1].replace(/\s+/g, "").toUpperCase();
         }
 
+        // Validar paquete o facturar por evento
+        const esFacturarEventoSi = facturarEventoRaw === "SI" || facturarEventoRaw === "SÍ" || facturarEventoRaw === "YES";
+        const esFacturarEventoNo = facturarEventoRaw === "NO";
+
         if (paquete) {
             conteoPorPaquete[paquete] = (conteoPorPaquete[paquete] || 0) + 1;
         } else {
-            alertasFila.push(`Fila ${filaExcel}: No tiene código de paquete asignado.`);
+            if (esFacturarEventoNo || !facturarEventoRaw) {
+                // Sin paquete y Facturar por evento = No (o vacío): Error de diligenciamiento en la matriz
+                erroresFila.push(`Fila ${filaExcel}: Falta asignar código de paquete en la matriz (Facturar por evento: ${facturarEventoRaw || "No"}).`);
+            } else if (esFacturarEventoSi) {
+                // Facturar por evento = Sí: Es por evento, no aplica validación de paquete
+                alertasFila.push(`Fila ${filaExcel}: Facturación por evento (omitido de validación por paquete).`);
+            } else {
+                alertasFila.push(`Fila ${filaExcel}: Sin código de paquete asignado.`);
+            }
         }
 
         // Parsear servicios
@@ -190,15 +203,19 @@ export function parsearMatriz(rawRows) {
 
         // Pre-validar según reglas de paquetes actuales
         if (paquete && paquete.startsWith("CPF")) {
-            // 1. Validar Fijos Obligatorios: exactamente 1 VM, 1 VENF y 1 ENF
+            // 1. Validar Fijos Obligatorios: exactamente 1 VM, y al menos 1 servicio de enfermería (VENF, ENF o ambos)
             if (vm !== 1) {
                 erroresFila.push(`VM: requiere 1 (tiene ${vm})`);
             }
-            if (venf !== 1) {
-                erroresFila.push(`VENF (Enf. Prof.): requiere 1 (tiene ${venf})`);
-            }
-            if (enf !== 1) {
-                erroresFila.push(`ENF (Aux. Enf.): requiere 1 (tiene ${enf})`);
+            if (venf === 0 && enf === 0) {
+                erroresFila.push(`Enfermería: Requiere al menos 1 servicio (VENF o ENF)`);
+            } else {
+                if (venf !== 0 && venf !== 1) {
+                    erroresFila.push(`VENF (Enf. Prof.): requiere 1 si está presente (tiene ${venf})`);
+                }
+                if (enf !== 0 && enf !== 1) {
+                    erroresFila.push(`ENF (Aux. Enf.): requiere 1 si está presente (tiene ${enf})`);
+                }
             }
 
             // 2. Validar A Elección: exactamente 1 entre (PSI, NUT, TS) con cantidad 1
@@ -248,6 +265,8 @@ export function parsearMatriz(rawRows) {
             nombre,
             paqueteRaw,
             paquete,
+            facturarEventoRaw,
+            esFacturarEvento: esFacturarEventoSi,
             servicios,
             totalTerapias,
             errores: erroresFila,

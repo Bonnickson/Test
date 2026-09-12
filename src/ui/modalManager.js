@@ -3,6 +3,13 @@ import {
     REGLAS_TERAPIAS_PAQUETES,
     obtenerInfoSoporte,
 } from "../config/constants.js";
+import {
+    copiarTextoSimple,
+    copiarErrorMatriz,
+    copiarTextoAlPortapapeles,
+    mostrarToastCopia,
+} from "../utils/clipboardUtils.js";
+import { formatearErrorConIconosPDF } from "../utils/textUtils.js";
 
 /**
  * Muestra el resumen de condiciones del paquete seleccionado en el panel lateral
@@ -21,11 +28,10 @@ export function mostrarCondicionesPaquete(tipoPaqueteSelect, paqueteCondicionesC
                 <span class="rule-value">Código en <code>2 PAQ.pdf</code></span>
             </div>
             <div class="rule-group">
-                <span class="rule-label">Fijos Obligatorios:</span>
+                <span class="rule-label">Obligatorios / Enfermería:</span>
                 <div class="rule-chips">
                     <span class="rule-chip required">VM: 1</span>
-                    <span class="rule-chip required">ENF: 1</span>
-                    <span class="rule-chip required">VENF: 1</span>
+                    <span class="rule-chip optional">ENF / VENF (1)</span>
                 </div>
             </div>
             <div class="rule-group">
@@ -77,11 +83,10 @@ export function mostrarModalReglasPaquete(paquete) {
                         <span class="rule-value">Código del paquete dentro de <code>2 PAQ.pdf</code></span>
                     </div>
                     <div class="rule-group">
-                        <span class="rule-label">Fijos Obligatorios:</span>
+                        <span class="rule-label">Obligatorios / Enfermería:</span>
                         <div class="rule-chips">
                             <span class="rule-chip required">🩺 Valoración Médica (1)</span>
-                            <span class="rule-chip required">🩺 Enfermería Profesional (1)</span>
-                            <span class="rule-chip required">💉 Auxiliar de Enfermería (1)</span>
+                            <span class="rule-chip optional">💉 ENF / VENF (1 o ambas)</span>
                         </div>
                     </div>
                     <div class="rule-group">
@@ -1009,9 +1014,9 @@ export function mostrarModalPrevalidacionMatriz(matrizData) {
             if (parts.length > 1) {
                 const header = parts[0].trim();
                 const body = parts.slice(1).join(":").trim();
-                return `<div class="${cls}"><span class="preval-icon-bullet">${icon}</span><span class="preval-err-tag">${header}</span><span class="preval-err-desc">${body}</span></div>`;
+                return `<div class="${cls}"><span class="preval-icon-bullet">${icon}</span><span class="preval-err-tag">${header}</span><span class="preval-err-desc">${formatearErrorConIconosPDF(body)}</span></div>`;
             }
-            return `<div class="${cls}"><span class="preval-icon-bullet">${icon}</span><span>${texto}</span></div>`;
+            return `<div class="${cls}"><span class="preval-icon-bullet">${icon}</span><span>${formatearErrorConIconosPDF(texto)}</span></div>`;
         };
 
         const detalles = [
@@ -1144,9 +1149,15 @@ export function mostrarModalPrevalidacionMatriz(matrizData) {
                             <span class="stat-pill-label">Conformes</span>
                             <span class="stat-pill-value" id="prevalKpiConformes">${conformes}</span>
                         </div>
-                        <div class="stat-pill ${conErrores > 0 ? 'error' : ''}">
-                            <span class="stat-pill-label">Novedades</span>
-                            <span class="stat-pill-value" id="prevalKpiNovedades">${conErrores}</span>
+                        <div class="stat-pill ${conErrores > 0 ? 'error' : ''}" style="display: flex; align-items: center; gap: 8px;">
+                            <div>
+                                <span class="stat-pill-label">Novedades</span>
+                                <span class="stat-pill-value" id="prevalKpiNovedades">${conErrores}</span>
+                            </div>
+                            <button type="button" id="btnCopiarTodasNovedadesMatriz" class="btn-copy-pill" title="Copiar todas las novedades visibles de la matriz (Documento - Paquete - Novedad)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                <span>Copiar</span>
+                            </button>
                         </div>
                     </div>
 
@@ -1290,7 +1301,7 @@ export function mostrarModalPrevalidacionMatriz(matrizData) {
 
             const doc = tr.getAttribute("data-doc") || "";
             const pkg = tr.getAttribute("data-pkg") || "";
-            const paciente = pacientesList.find((p) => p.documento === doc);
+            const paciente = pacientesList.find((p) => String(p.documento || "").trim() === String(doc).trim());
 
             if (btnDoc) {
                 copiarTextoSimple(e, doc);
@@ -1300,11 +1311,54 @@ export function mostrarModalPrevalidacionMatriz(matrizData) {
                 const textoErroresRaw = paciente
                     ? (paciente.errores || []).join(" | ") || (paciente.alertas || []).join(" | ") || "Conforme"
                     : "Conforme";
-                const nombreStr = paciente?.nombre
-                    ? paciente.nombre.toLowerCase().replace(/(?:^|\s|\/|-)\S/g, (match) => match.toUpperCase())
-                    : "";
-                copiarErrorMatriz(e, pkg, doc, textoErroresRaw, nombreStr);
+                copiarErrorMatriz(e, pkg, doc, textoErroresRaw);
             }
+        });
+    }
+
+    // Botón masivo para copiar todas las novedades de la matriz
+    const btnCopiarTodas = document.getElementById("btnCopiarTodasNovedadesMatriz");
+    if (btnCopiarTodas) {
+        btnCopiarTodas.addEventListener("click", async (e) => {
+            e.stopPropagation();
+
+            // Obtener documentos de filas visibles según filtros actuales
+            const filasVisibles = tbody
+                ? Array.from(tbody.querySelectorAll("tr.preval-row")).filter((tr) => tr.style.display !== "none")
+                : [];
+            const docsVisibles = new Set(filasVisibles.map((tr) => (tr.getAttribute("data-doc") || "").trim()).filter(Boolean));
+
+            const pacientesConNovedad = pacientesList.filter((p) => {
+                const tieneNovedad = (p.errores && p.errores.length > 0) || (p.alertas && p.alertas.length > 0);
+                if (!tieneNovedad) return false;
+                const docStr = String(p.documento || "").trim();
+                return docsVisibles.size > 0 ? docsVisibles.has(docStr) : true;
+            });
+
+            if (pacientesConNovedad.length === 0) {
+                mostrarToastCopia("No hay novedades para copiar");
+                return;
+            }
+
+            const lineas = pacientesConNovedad.map((p) => {
+                const pkg = p.paquete || p.paqueteRaw || "CPF";
+                const errText = (p.errores || []).join(" | ") || (p.alertas || []).join(" | ") || "Sin novedades";
+                return `${p.documento} - ${pkg} - ${errText.trim()}`;
+            });
+
+            const textoFinal = lineas.join("\n");
+            await copiarTextoAlPortapapeles(textoFinal);
+            mostrarToastCopia(`${lineas.length} novedades copiadas`);
+
+            const origHTML = btnCopiarTodas.innerHTML;
+            btnCopiarTodas.innerHTML = `✓ ${lineas.length} Copiadas`;
+            btnCopiarTodas.style.color = "#10b981";
+            btnCopiarTodas.style.borderColor = "#10b981";
+            setTimeout(() => {
+                btnCopiarTodas.innerHTML = origHTML;
+                btnCopiarTodas.style.color = "";
+                btnCopiarTodas.style.borderColor = "";
+            }, 2000);
         });
     }
 }

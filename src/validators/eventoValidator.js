@@ -10,7 +10,11 @@ import {
     escapeRegExp,
     extraerNumeroDelTexto,
 } from "../utils/textUtils.js";
-import { extraerTextoPDF, extraerFechas } from "../utils/pdfUtils.js";
+import {
+    extraerTextoPDF,
+    extraerTextoOCRDePDF,
+    extraerFechas,
+} from "../utils/pdfUtils.js";
 
 /**
  * Valida que solo existan archivos permitidos en la carpeta de evento
@@ -107,9 +111,23 @@ export async function validarPDF(
             data: await file.arrayBuffer(),
         }).promise;
 
-        const texto = await extraerTextoPDF(pdf);
-        const textoPlano = texto.toUpperCase().replace(/\s+/g, " ").trim();
-        const textoPlanoNorm = normalizeForSearch(texto);
+        let texto = await extraerTextoPDF(pdf);
+        let textoPlano = texto.toUpperCase().replace(/\s+/g, " ").trim();
+        let textoPlanoNorm = normalizeForSearch(texto);
+
+        // Helper para reintentar con OCR si aún no se ha ejecutado
+        let ocrEjecutado = false;
+        const asegurarOCR = async (terminoBuscado = "") => {
+            if (!ocrEjecutado) {
+                ocrEjecutado = true;
+                const textoOCR = await extraerTextoOCRDePDF(pdf, 2, terminoBuscado);
+                if (textoOCR && textoOCR.trim().length > 0) {
+                    texto = (texto + " " + textoOCR).trim();
+                    textoPlanoNorm = normalizeForSearch(texto);
+                    fechas = extraerFechas(texto);
+                }
+            }
+        };
 
         // Extraer fechas
         const fechas = extraerFechas(texto);
@@ -166,6 +184,10 @@ export async function validarPDF(
         })();
 
         if (debeValidarNumero) {
+            if (!textoPlanoNorm.includes(nroDocumento)) {
+                await asegurarOCR();
+            }
+
             if (!textoPlanoNorm.includes(nroDocumento)) {
                 // Error: va a erroresPorServicio si es FOMAG con servicio, sino a errores generales
                 if (servicioUpper && convenio === "fomag") {
@@ -229,6 +251,24 @@ export async function validarPDF(
                     textoEncontrado = buscar;
                     vecesTexto = veces;
                     break;
+                }
+            }
+
+            // Si no se encontró el texto, intentar con OCR
+            if (!textoEncontrado) {
+                await asegurarOCR();
+                for (const buscar of textosABuscar) {
+                    const buscarNorm = normalizeForSearch(buscar);
+                    const safe = escapeRegExp(buscarNorm);
+                    const veces = (
+                        textoPlanoNorm.match(new RegExp(safe, "g")) || []
+                    ).length;
+
+                    if (veces > 0) {
+                        textoEncontrado = buscar;
+                        vecesTexto = veces;
+                        break;
+                    }
                 }
             }
 

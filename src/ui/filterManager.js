@@ -1,3 +1,9 @@
+import { SERVICIOS_NOMBRES } from "../config/constants.js";
+import {
+    copiarTextoAlPortapapeles,
+    mostrarToastCopia,
+} from "../utils/clipboardUtils.js";
+
 /**
  * Normaliza el tipo de error para comparaciones consistentes
  */
@@ -287,24 +293,28 @@ export function aplicarFiltros(elements = {}, state = {}) {
 
 /**
  * Copia todos los errores visibles en la tabla con el formato:
- * Responsable - Documento - Paquete - Servicio - Archivo - Error
+ * Paquete - Documento - Servicio - Archivo - Error
  */
 export async function copiarTodosErroresVisibles(resultadosGlobales) {
     const tablaBody = document.querySelector("#tabla tbody");
-    if (!tablaBody) return;
-
-    const filas = Array.from(tablaBody.querySelectorAll("tr"));
     const carpetasVisibles = new Set();
 
-    filas.forEach((tr) => {
-        if (tr.style.display !== "none") {
-            const c = tr.getAttribute("data-carpeta");
-            if (c) carpetasVisibles.add(c);
-        }
-    });
+    if (tablaBody) {
+        const filas = Array.from(tablaBody.querySelectorAll("tr"));
+        filas.forEach((tr) => {
+            if (tr.style.display !== "none") {
+                const c = tr.getAttribute("data-carpeta");
+                if (c) carpetasVisibles.add(c);
+            }
+        });
+    }
+
+    if (carpetasVisibles.size === 0 && resultadosGlobales) {
+        Object.keys(resultadosGlobales).forEach((c) => carpetasVisibles.add(c));
+    }
 
     if (carpetasVisibles.size === 0) {
-        alert("No hay expedientes visibles con el filtro actual.");
+        mostrarToastCopia("No hay expedientes con errores visibles");
         return;
     }
 
@@ -319,12 +329,7 @@ export async function copiarTodosErroresVisibles(resultadosGlobales) {
 
         const pkg = r?.tipoPaquete || r?.tipo || (document.getElementById("tipoPaquete") ? document.getElementById("tipoPaquete").value : "CPF1108");
         const doc = r?.nroDocumento || carpeta;
-
-        let responsable = r?.auditor || r?.datosMatriz?.nombre || "";
-        if (responsable) {
-            responsable = responsable.toLowerCase().replace(/(?:^|\s|\/|-)\S/g, (match) => match.toUpperCase()).trim();
-        }
-        const prefijo = responsable ? `${responsable} - ${doc} - ${pkg}` : `${pkg} - ${doc}`;
+        const prefijo = `${pkg} - ${doc}`;
 
         // 1. Errores generales / de paquete
         const errsGen = [...(r.errores || []), ...(r.erroresPorServicio?.["General"] || [])];
@@ -360,25 +365,23 @@ export async function copiarTodosErroresVisibles(resultadosGlobales) {
     });
 
     if (lineas.length === 0) {
-        alert("No se encontraron errores en los expedientes visibles.");
+        mostrarToastCopia("No se encontraron errores en los expedientes visibles");
         return;
     }
 
     const textoFinal = lineas.join("\n");
-    try {
-        await navigator.clipboard.writeText(textoFinal);
-        const btn = document.getElementById("btnCopiarTodosErrores");
-        if (btn) {
-            const origHTML = btn.innerHTML;
-            btn.innerHTML = `✓ ${lineas.length} Errores Copiados`;
-            btn.style.color = "#10b981";
-            setTimeout(() => {
-                btn.innerHTML = origHTML;
-                btn.style.color = "var(--danger-text)";
-            }, 2200);
-        }
-    } catch (e) {
-        prompt("Copia los errores visibles:", textoFinal);
+    await copiarTextoAlPortapapeles(textoFinal);
+    mostrarToastCopia(`${lineas.length} errores copiados`);
+
+    const btn = document.getElementById("btnCopiarTodosErrores");
+    if (btn) {
+        const origHTML = btn.innerHTML;
+        btn.innerHTML = `✓ ${lineas.length} Copiados`;
+        btn.style.color = "#10b981";
+        setTimeout(() => {
+            btn.innerHTML = origHTML;
+            btn.style.color = "";
+        }, 2200);
     }
 }
 

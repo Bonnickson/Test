@@ -481,17 +481,26 @@ async function procesarLoteArchivos(archivosLista) {
             const carpeta = infoCarpeta.carpetaNombre;
             let paqueteParaCarpeta = infoCarpeta.tipoPaquete;
 
-            // Extraer documento del nombre de la carpeta
-            const nroDocumento = normalizarDocumentoMatriz(carpeta.match(/^\d+/)?.[0] || carpeta);
+            // Búsqueda en la matriz tal cual viene escrita la carpeta
+            const claveBusquedaMatriz = normalizarDocumentoMatriz(carpeta);
+            // Extracción del número de documento (solo dígitos numéricos, ignorando prefijos como TI, CC, RC, etc.)
+            const nroDocumento = (carpeta.match(/\d+/)?.[0] || carpeta).trim();
 
             // Cruce con la matriz si existe
             let datosMatrizPaciente = null;
             if (datosMatrizGlobal && datosMatrizGlobal.pacientesPorDoc) {
-                if (nroDocumento && datosMatrizGlobal.pacientesPorDoc.has(nroDocumento)) {
-                    datosMatrizPaciente = datosMatrizGlobal.pacientesPorDoc.get(nroDocumento);
-                    documentosProcesadosSet.add(nroDocumento);
-                    if (datosMatrizPaciente.paquete) {
-                        paqueteParaCarpeta = datosMatrizPaciente.paquete;
+                if (claveBusquedaMatriz && datosMatrizGlobal.pacientesPorDoc.has(claveBusquedaMatriz)) {
+                    datosMatrizPaciente = datosMatrizGlobal.pacientesPorDoc.get(claveBusquedaMatriz);
+                    documentosProcesadosSet.add(claveBusquedaMatriz);
+                    // Si la carpeta no tenía paquete explícito en disco, tomar el de la matriz
+                    if (!infoCarpeta.tipoPaquete || infoCarpeta.tipoPaquete === "auto" || infoCarpeta.tipoPaquete === "CPF1108") {
+                        if (datosMatrizPaciente.paquete) {
+                            paqueteParaCarpeta = datosMatrizPaciente.paquete;
+                        } else if (datosMatrizPaciente.esFacturarEvento) {
+                            paqueteParaCarpeta = "EVENTO";
+                        } else {
+                            paqueteParaCarpeta = "SIN_PAQUETE";
+                        }
                     }
                 }
             }
@@ -519,7 +528,7 @@ async function procesarLoteArchivos(archivosLista) {
                 resultados[carpetaKey].erroresPorServicio["General"] =
                     resultados[carpetaKey].erroresPorServicio["General"] || [];
                 resultados[carpetaKey].erroresPorServicio["General"].push(
-                    `El documento ${nroDocumento || carpeta} NO se encuentra programado en la matriz cargada.`
+                    `El paciente ${carpeta} NO se encuentra programado en la matriz cargada.`
                 );
             }
 
@@ -603,24 +612,33 @@ async function procesarLoteArchivos(archivosLista) {
         // VALIDACIÓN BIDIRECCIONAL: Pacientes de la matriz que no tienen carpeta de soportes
         if (datosMatrizGlobal && tipoValidacion === "paquete") {
             for (const [doc, pac] of datosMatrizGlobal.pacientesPorDoc.entries()) {
+                // Omitir si es un paciente que factura por evento y no tiene paquete
+                if (pac.esFacturarEvento && !pac.paquete) {
+                    continue;
+                }
+
                 if (!documentosProcesadosSet.has(doc)) {
                     const carpetaVirtual = `${doc}`.trim();
+                    const paqueteAsignado = pac.paquete || "SIN_PAQUETE";
                     resultados[carpetaVirtual] = inicializarResultado(
                         "paquete",
-                        pac.paquete || "CPF1108",
+                        paqueteAsignado,
                         convenio
                     );
                     resultados[carpetaVirtual].nroDocumento = doc;
-                    resultados[carpetaVirtual].tipo = pac.paquete || "CPF1108";
-                    resultados[carpetaVirtual].tipoPaquete = pac.paquete || "CPF1108";
+                    resultados[carpetaVirtual].tipo = paqueteAsignado;
+                    resultados[carpetaVirtual].tipoPaquete = paqueteAsignado;
                     resultados[carpetaVirtual].datosMatriz = pac;
                     resultados[carpetaVirtual].esDesdeMatriz = true;
                     resultados[carpetaVirtual].servicios.add("General");
-                    resultados[carpetaVirtual].erroresPorServicio["General"] = [
-                        `No se encontró carpeta de soportes PDF para el documento ${doc} programado en la matriz.`
-                    ];
+                    
+                    const mensajeError = !pac.paquete
+                        ? `No se encontró carpeta de soportes y el paciente ${doc} no tiene paquete asignado en la matriz.`
+                        : `No se encontró carpeta de soportes PDF para el documento ${doc} programado en la matriz.`;
 
-                    createPlaceholderRow(tablaBody, carpetaVirtual, "paquete", pac.paquete);
+                    resultados[carpetaVirtual].erroresPorServicio["General"] = [mensajeError];
+
+                    createPlaceholderRow(tablaBody, carpetaVirtual, "paquete", paqueteAsignado);
                     updateRow(tablaBody, carpetaVirtual, resultados[carpetaVirtual], Boolean(mostrarExitosCheckbox?.checked));
                 }
             }
@@ -728,6 +746,12 @@ if (btnVerPrevalidacion) {
 
 // Input file selector de soportes
 input.addEventListener("change", async () => {
+    if (!input.files || input.files.length === 0) return;
+    estado.classList.remove("oculto");
+    estado.textContent = "📂 Cargando y organizando soportes seleccionados...";
+    barraProgresoDiv.classList.remove("oculto");
+    progresoFill.style.width = "5%";
+    await cederHiloPrincipal();
     await procesarLoteArchivos(input.files);
 });
 
@@ -984,7 +1008,7 @@ window.copiarFormatoCompleto = (event, paquete, carpeta) =>
 window.copiarHallazgosCompletos = (event, carpeta) =>
     copiarHallazgosCompletos(event, carpeta, todosLosResultados, seleccionarCarpeta);
 window.copiarTextoSimple = (event, texto) => copiarTextoSimple(event, texto);
-window.copiarErrorMatriz = (event, paquete, documento, erroresTexto, nombre) =>
-    copiarErrorMatriz(event, paquete, documento, erroresTexto, nombre);
+window.copiarErrorMatriz = (event, paquete, documento, erroresTexto) =>
+    copiarErrorMatriz(event, paquete, documento, erroresTexto);
 window.mostrarAvisoRevisionFirmas = mostrarAvisoRevisionFirmas;
 window.mostrarModalReglasPaquete = mostrarModalReglasPaquete;

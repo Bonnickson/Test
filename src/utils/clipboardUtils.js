@@ -104,22 +104,21 @@ export async function copiarTextoSimple(event, texto) {
 }
 
 /**
- * Copia el formato error de matriz: "${nombre} - ${documento} - ${paquete} - ${errores}"
+ * Copia el formato error de matriz: "${paquete} - ${documento} - ${errores}"
  */
-export async function copiarErrorMatriz(event, paquete, documento, erroresTexto, nombre = "") {
+export async function copiarErrorMatriz(event, paquete, documento, erroresTexto) {
     if (event) event.stopPropagation();
     const pkg = paquete || "CPF";
     const doc = documento || "";
     const err = erroresTexto ? erroresTexto.trim() : "Sin novedades";
-    const nom = nombre ? nombre.trim() : "";
-    const texto = nom ? `${nom} - ${doc} - ${pkg} - ${err}` : `${doc} - ${pkg} - ${err}`;
+    const texto = `${pkg} - ${doc} - ${err}`;
     await copiarTextoAlPortapapeles(texto);
     mostrarToastCopia(texto);
 }
 
 /**
  * Copia los hallazgos completos estructurados por línea:
- * "${nombreResponsableOCliente} - ${documento} - ${paquete} - ${servicio} - ${archivo} - ${error}" o "${paquete} - ${documento}..."
+ * "${paquete} - ${documento} - ${servicio} - ${archivo} - ${error}"
  */
 export async function copiarHallazgosCompletos(event, carpeta, resultadosGlobales, seleccionarCarpetaCallback) {
     if (typeof seleccionarCarpetaCallback === "function") {
@@ -134,13 +133,7 @@ export async function copiarHallazgosCompletos(event, carpeta, resultadosGlobale
 
         const pkg = r?.tipoPaquete || r?.tipo || (document.getElementById("tipoPaquete") ? document.getElementById("tipoPaquete").value : "CPF1108");
         const doc = carpeta || "";
-        
-        // Obtener el responsable (auditor de la carpeta) o nombre del paciente
-        let responsable = r?.auditor || r?.datosMatriz?.nombre || "";
-        if (responsable) {
-            responsable = responsable.toLowerCase().replace(/(?:^|\s|\/|-)\S/g, (match) => match.toUpperCase()).trim();
-        }
-        const prefijo = responsable ? `${responsable} - ${doc} - ${pkg}` : `${pkg} - ${doc}`;
+        const prefijo = `${pkg} - ${doc}`;
         
         const lineas = [];
 

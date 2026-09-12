@@ -41,7 +41,13 @@ const REGLAS_ARCHIVO_5 = {
         igualarConFechas: true,
     },
     VENF: {
-        debeContener: ["Registro De Enfermería"],
+        debeContener: [
+            "Registro De Enfermería",
+            "Registros asistenciales",
+            "Registro asistencial",
+            "Atención Domiciliaria - Enfermería",
+            "Atencion Domiciliaria - Enfermeria",
+        ],
         igualarConFechas: true,
     },
     PSI: {
